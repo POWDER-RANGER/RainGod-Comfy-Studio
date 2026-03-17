@@ -99,7 +99,7 @@ jobs:
         uses: docker/setup-buildx-action@b5730b5c3f3e544ecb50b54f0a7c6a15e3d0ea9b  # v3.8.0
 
       - name: Build image (no push)
-        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991  # v6.13.0
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294  # v7.0.0
         with:
           context: .
           target: production
