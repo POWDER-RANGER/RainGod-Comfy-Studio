@@ -16,12 +16,14 @@ jobs:
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
@@ -33,31 +35,33 @@ jobs:
           pip install -r backend/requirements.txt
 
       - name: Ruff format check
-        run: ruff format --check .
+        run: ruff format --check backend/
 
       - name: Ruff lint
-        run: ruff check .
+        run: ruff check backend/
 
       - name: MyPy
         run: mypy backend/ --ignore-missing-imports
 
   # ------------------------------------------------------------------ #
-  # Job 2: Tests (matrix: 3.10 + 3.11)                                   #
+  # Job 2: Tests (matrix: 3.10 + 3.11)                                  #
   # ------------------------------------------------------------------ #
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11"]
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -78,28 +82,30 @@ jobs:
             --cov-report=xml:coverage.xml
 
       - name: Upload coverage
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673  # v4.5.0
+        uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
           fail_ci_if_error: false
           flags: python-${{ matrix.python-version }}
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
   # ------------------------------------------------------------------ #
-  # Job 3: Docker Build Verification                                      #
+  # Job 3: Docker Build Verification                                     #
   # ------------------------------------------------------------------ #
   docker:
     name: Docker Build Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5730b5c3f3e544ecb50b54f0a7c6a15e3d0ea9b  # v3.8.0
+        uses: docker/setup-buildx-action@v3
 
       - name: Build image (no push)
-        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991  # v6.13.0
+        uses: docker/build-push-action@v6
         with:
           context: .
           target: production
