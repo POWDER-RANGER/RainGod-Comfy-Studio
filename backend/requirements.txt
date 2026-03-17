@@ -17,7 +17,7 @@ pydantic-settings==2.2.1
 
 # Async utilities
 anyio==4.3.0
-aiofiles==23.2.1
+aiofiles==25.1.0
 
 # Image processing
 Pillow==12.1.1
