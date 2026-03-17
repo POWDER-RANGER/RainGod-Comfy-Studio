@@ -9,7 +9,7 @@ uvicorn[standard]==0.29.0
 # HTTP Client
 requests==2.32.4
 httpx==0.27.0
-websockets==12.0
+websockets==16.0
 
 # Data Validation
 pydantic==2.7.1
