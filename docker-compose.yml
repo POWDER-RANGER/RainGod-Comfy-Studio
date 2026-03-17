@@ -1,0 +1,178 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # ComfyUI Service
+  # ============================================================================
+  comfyui:
+    image: pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
+    container_name: raingod_comfyui
+    restart: unless-stopped
+    
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    # Ports
+    ports:
+      - "8188:8188"
+    
+    # Volumes
+    volumes:
+      - ./ComfyUI:/workspace/ComfyUI
+      - ./outputs:/workspace/outputs
+      - ./temp:/workspace/temp
+      - comfyui_models:/workspace/ComfyUI/models
+    
+    # Working directory
+    working_dir: /workspace/ComfyUI
+    
+    # Environment
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    
+    # Command
+    command: python main.py --listen 0.0.0.0 --port 8188
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8188/system_stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Networks
+    networks:
+      - raingod_network
+  
+  # ============================================================================
+  # RAINGOD Backend Service
+  # ============================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: raingod-backend:latest
+    container_name: raingod_backend
+    restart: unless-stopped
+    
+    # Ports
+    ports:
+      - "8000:8000"
+    
+    # Volumes
+    volumes:
+      - ./backend:/app/backend
+      - ./outputs:/app/outputs
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+      - ./workflows:/app/workflows
+    
+    # Environment
+    environment:
+      - COMFYUI_API_ENDPOINT=http://comfyui:8188
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_RELOAD=false
+      - API_WORKERS=4
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+    
+    # Depends on ComfyUI
+    depends_on:
+      comfyui:
+        condition: service_healthy
+    
+    # Command
+    command: uvicorn backend.rain_backend:app --host 0.0.0.0 --port 8000 --workers 4
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    
+    # Networks
+    networks:
+      - raingod_network
+  
+  # ============================================================================
+  # Redis Cache (Optional)
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: raingod_redis
+    restart: unless-stopped
+    
+    # Ports
+    ports:
+      - "6379:6379"
+    
+    # Volumes
+    volumes:
+      - redis_data:/data
+    
+    # Command (with persistence)
+    command: redis-server --appendonly yes
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+    # Networks
+    networks:
+      - raingod_network
+  
+  # ============================================================================
+  # Nginx Reverse Proxy (Optional)
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: raingod_nginx
+    restart: unless-stopped
+    
+    # Ports
+    ports:
+      - "80:80"
+      - "443:443"
+    
+    # Volumes
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    
+    # Depends on backend
+    depends_on:
+      - backend
+    
+    # Networks
+    networks:
+      - raingod_network
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  raingod_network:
+    driver: bridge
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  comfyui_models:
+    driver: local
+  redis_data:
+    driver: local

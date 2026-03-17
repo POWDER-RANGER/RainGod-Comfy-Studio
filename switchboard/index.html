@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAINGOD Switchboard</title>
+  <style>
+    /* ------------------------------------------------------------------ */
+    /* Reset & Base                                                          */
+    /* ------------------------------------------------------------------ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0a0a0f;
+      --surface:     #12121a;
+      --surface2:    #1a1a27;
+      --border:      #2a2a40;
+      --accent:      #7c3aed;
+      --accent-glow: #9d5ff5;
+      --ok:          #22d3a0;
+      --warn:        #f59e0b;
+      --err:         #ef4444;
+      --text:        #e2e0f0;
+      --text-dim:    #8880a0;
+      --mono:        "JetBrains Mono", "Fira Code", "Consolas", monospace;
+      --sans:        "Inter", system-ui, sans-serif;
+      --radius:      8px;
+      --transition:  0.18s ease;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Layout                                                               */
+    /* ------------------------------------------------------------------ */
+    .app {
+      display: grid;
+      grid-template-rows: 56px 1fr;
+      grid-template-columns: 260px 1fr;
+      grid-template-areas:
+        "header header"
+        "sidebar main";
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ---- Header ---- */
+    header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      background: linear-gradient(90deg, var(--accent), var(--accent-glow));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-spacer { flex: 1; }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: background var(--transition);
+    }
+    .status-dot.ok   { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.err  { background: var(--err); }
+
+    /* ---- Sidebar ---- */
+    aside {
+      grid-area: sidebar;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px 0;
+    }
+
+    .nav-section {
+      padding: 8px 16px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      cursor: pointer;
+      border-radius: 0;
+      transition: background var(--transition);
+      user-select: none;
+    }
+
+    .nav-item:hover { background: var(--surface2); }
+    .nav-item.active {
+      background: rgba(124, 58, 237, 0.15);
+      border-left: 3px solid var(--accent);
+      padding-left: 17px;
+    }
+
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* ---- Main Content ---- */
+    main {
+      grid-area: main;
+      overflow-y: auto;
+      padding: 28px 32px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Panels (tabs)                                                        */
+    /* ------------------------------------------------------------------ */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Cards / Sections                                                     */
+    /* ------------------------------------------------------------------ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 14px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Stats Grid                                                           */
+    /* ------------------------------------------------------------------ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+
+    .stat-value.ok   { color: var(--ok); }
+    .stat-value.warn { color: var(--warn); }
+    .stat-value.err  { color: var(--err); }
+
+    /* ------------------------------------------------------------------ */
+    /* Form controls                                                        */
+    /* ------------------------------------------------------------------ */
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Buttons                                                              */
+    /* ------------------------------------------------------------------ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-glow); box-shadow: 0 0 12px rgba(124,58,237,0.4); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.15);
+      color: var(--err);
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+    /* ------------------------------------------------------------------ */
+    /* Code / Pre                                                           */
+    /* ------------------------------------------------------------------ */
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--ok);
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Alerts                                                               */
+    /* ------------------------------------------------------------------ */
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .alert.visible { display: block; }
+    .alert-ok   { background: rgba(34,211,160,0.1); border: 1px solid var(--ok); color: var(--ok); }
+    .alert-err  { background: rgba(239,68,68,0.1); border: 1px solid var(--err); color: var(--err); }
+    .alert-warn { background: rgba(245,158,11,0.1); border: 1px solid var(--warn); color: var(--warn); }
+
+    /* ------------------------------------------------------------------ */
+    /* Queue Table                                                          */
+    /* ------------------------------------------------------------------ */
+    .queue-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .queue-table th {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .queue-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(42,42,64,0.5);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .queue-table tr:hover td { background: var(--surface2); }
+
+    /* ------------------------------------------------------------------ */
+    /* Badge                                                                */
+    /* ------------------------------------------------------------------ */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-ok   { background: rgba(34,211,160,0.15); color: var(--ok); }
+    .badge-warn { background: rgba(245,158,11,0.15); color: var(--warn); }
+    .badge-err  { background: rgba(239,68,68,0.15); color: var(--err); }
+    .badge-dim  { background: var(--surface2); color: var(--text-dim); }
+
+    /* ------------------------------------------------------------------ */
+    /* Spinner                                                              */
+    /* ------------------------------------------------------------------ */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(124,58,237,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ------------------------------------------------------------------ */
+    /* Preset chips                                                         */
+    /* ------------------------------------------------------------------ */
+    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .chip:hover { border-color: var(--accent); color: var(--text); }
+    .chip.selected { background: rgba(124,58,237,0.2); border-color: var(--accent); color: var(--accent-glow); }
+
+    /* ------------------------------------------------------------------ */
+    /* Result image                                                         */
+    /* ------------------------------------------------------------------ */
+    #result-container { margin-top: 16px; }
+    #result-img {
+      max-width: 100%;
+      max-height: 480px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: none;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Progress bar                                                         */
+    /* ------------------------------------------------------------------ */
+    .progress-wrap {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-glow));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .progress-bar.indeterminate {
+      width: 40%;
+      animation: indeterminate 1.4s ease infinite;
+    }
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Scrollbar styling                                                    */
+    /* ------------------------------------------------------------------ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================================================================ -->
+  <!-- Header                                                             -->
+  <!-- ================================================================ -->
+  <header>
+    <div class="logo">⚡ RAINGOD</div>
+    <span style="font-size:12px; color:var(--text-dim); margin-left:4px;">Switchboard</span>
+    <div class="header-spacer"></div>
+    <div class="status-pill">
+      <div class="status-dot" id="backend-dot"></div>
+      <span id="backend-status-label">Checking…</span>
+    </div>
+    <div class="status-pill" style="margin-left:8px;">
+      <div class="status-dot" id="comfyui-dot"></div>
+      <span id="comfyui-status-label">ComfyUI</span>
+    </div>
+    <button class="btn btn-secondary" style="margin-left:12px; padding:6px 12px; font-size:12px;" onclick="refreshHealth()">↻ Refresh</button>
+  </header>
+
+  <!-- ================================================================ -->
+  <!-- Sidebar                                                            -->
+  <!-- ================================================================ -->
+  <aside>
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showPanel('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+
+    <div class="nav-section" style="margin-top:8px;">Generation</div>
+    <div class="nav-item" onclick="showPanel('generate')">
+      <span class="nav-icon">🎨</span> Generate
+    </div>
+    <div class="nav-item" onclick="showPanel('queue')">
+      <span class="nav-icon">📋</span> Queue
+    </div>
+
+    <div class="nav-section" style="margin-top:8px;">Configuration</div>
+    <div class="nav-item" onclick="showPanel('presets')">
+      <span class="nav-icon">⚙️</span> Presets
+    </div>
+    <div class="nav-item" onclick="showPanel('config')">
+      <span class="nav-icon">🔧</span> Config
+    </div>
+
+    <div class="nav-section" style="margin-top:8px;">Debug</div>
+    <div class="nav-item" onclick="showPanel('logs')">
+      <span class="nav-icon">📜</span> API Logs
+    </div>
+  </aside>
+
+  <!-- ================================================================ -->
+  <!-- Main                                                               -->
+  <!-- ================================================================ -->
+  <main>
+
+    <!-- ============================================================== -->
+    <!-- DASHBOARD                                                        -->
+    <!-- ============================================================== -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="panel-title">Dashboard</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Backend</div>
+          <div class="stat-value" id="stat-backend">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">ComfyUI</div>
+          <div class="stat-value" id="stat-comfyui">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">GPU Tier</div>
+          <div class="stat-value" id="stat-gpu" style="font-size:16px;">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Uptime</div>
+          <div class="stat-value" id="stat-uptime" style="font-size:16px; color:var(--text);">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Queue Running</div>
+          <div class="stat-value" id="stat-queue-running">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Queue Pending</div>
+          <div class="stat-value" id="stat-queue-pending">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Recent Activity</div>
+        <div id="activity-log" style="font-family:var(--mono); font-size:12px; color:var(--text-dim);">
+          No activity yet.
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- GENERATE                                                         -->
+    <!-- ============================================================== -->
+    <div class="panel" id="panel-generate">
+      <div class="panel-title">Generate Image</div>
+
+      <div id="gen-alert-ok" class="alert alert-ok"></div>
+      <div id="gen-alert-err" class="alert alert-err"></div>
+
+      <div class="card">
+        <div class="card-title">Prompts</div>
+        <div class="form-group">
+          <label>Positive Prompt</label>
+          <textarea id="gen-positive" rows="3" placeholder="glowing neon city at night, synthwave aesthetic, high detail…"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Negative Prompt</label>
+          <textarea id="gen-negative" rows="2" placeholder="blurry, low quality, watermark, text, deformed…"></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sampler Preset</div>
+        <div class="chip-group" id="preset-chips"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resolution</div>
+        <div class="chip-group" id="resolution-chips"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">LoRA Style (optional)</div>
+        <div class="chip-group" id="lora-chips">
+          <div class="chip selected" data-value="" onclick="selectChip('lora-chips', this)">None</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Options</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quality Tier</label>
+            <select id="gen-quality">
+              <option value="standard">Standard</option>
+              <option value="draft">Draft</option>
+              <option value="final">Final</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Seed (leave blank = random)</label>
+            <input type="number" id="gen-seed" min="0" placeholder="Random" />
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="gen-btn" onclick="submitGenerate()">
+        <span>⚡</span> Generate
+      </button>
+
+      <div id="gen-progress" style="display:none; margin-top:12px;">
+        <div class="progress-wrap">
+          <div class="progress-bar indeterminate" id="gen-progress-bar"></div>
+        </div>
+        <div style="font-size:12px; color:var(--text-dim); margin-top:4px;" id="gen-progress-label">Queuing…</div>
+      </div>
+
+      <div id="result-container">
+        <img id="result-img" alt="Generated image" />
+        <pre id="result-json" style="display:none; margin-top:12px;"></pre>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- QUEUE                                                            -->
+    <!-- ============================================================== -->
+    <div class="panel" id="panel-queue">
+      <div class="panel-title">Queue Status</div>
+
+      <div style="display:flex; gap:12px; margin-bottom:20px;">
+        <button class="btn btn-secondary" onclick="refreshQueue()">↻ Refresh</button>
+        <button class="btn btn-danger" onclick="confirmClearQueue()">🗑 Clear All Pending</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Running</div>
+        <table class="queue-table">
+          <thead>
+            <tr><th>Prompt ID</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="queue-running-body">
+            <tr><td colspan="3" style="color:var(--text-dim);">No running jobs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Pending</div>
+        <table class="queue-table">
+          <thead>
+            <tr><th>Prompt ID</th><th>Position</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="queue-pending-body">
+            <tr><td colspan="3" style="color:var(--text-dim);">Queue is empty.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- PRESETS                                                          -->
+    <!-- ============================================================== -->
+    <div class="panel" id="panel-presets">
+      <div class="panel-title">Presets</div>
+
+      <div class="card">
+        <div class="card-title">Sampler Presets</div>
+        <div id="preset-table-wrap">Loading…</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resolution Presets</div>
+        <div id="resolution-table-wrap">Loading…</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">LoRA Mappings</div>
+        <div id="lora-table-wrap">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- CONFIG                                                           -->
+    <!-- ============================================================== -->
+    <div class="panel" id="panel-config">
+      <div class="panel-title">Active Configuration</div>
+
+      <div class="card">
+        <div class="card-title">Backend Config</div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>API Base URL</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="api-base-input" value="http://localhost:8000" />
+            <button class="btn btn-secondary" onclick="saveApiBase()">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Runtime Config</div>
+        <pre id="config-json">Loading…</pre>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- LOGS                                                             -->
+    <!-- ============================================================== -->
+    <div class="panel" id="panel-logs">
+      <div class="panel-title">API Logs</div>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button class="btn btn-secondary" onclick="clearLogs()">🗑 Clear</button>
+        <label style="display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text-dim);">
+          <input type="checkbox" id="auto-scroll" checked /> Auto-scroll
+        </label>
+      </div>
+
+      <pre id="log-output" style="height:60vh; max-height:none;">RAINGOD Switchboard ready. API calls will appear here.\n</pre>
+    </div>
+
+  </main>
+</div>
+
+<!-- ================================================================== -->
+<!-- JavaScript                                                           -->
+<!-- ================================================================== -->
+<script>
+'use strict';
+
+/* -------------------------------------------------------------------- */
+/* State                                                                  */
+/* -------------------------------------------------------------------- */
+let API_BASE = localStorage.getItem('raingod_api_base') || 'http://localhost:8000';
+let _presetsCache = null;
+let _selectedPreset = 'quality';
+let _selectedResolution = 'cover_art';
+let _selectedLora = '';
+
+/* -------------------------------------------------------------------- */
+/* Boot                                                                   */
+/* -------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('api-base-input').value = API_BASE;
+  refreshHealth();
+  loadPresets();
+  refreshQueue();
+  setInterval(refreshHealth, 30_000);
+  setInterval(refreshQueue, 10_000);
+  log('Switchboard started. API: ' + API_BASE);
+});
+
+/* -------------------------------------------------------------------- */
+/* Navigation                                                             */
+/* -------------------------------------------------------------------- */
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // Lazy-load
+  if (name === 'presets' && !_presetsCache) loadPresets();
+  if (name === 'config') loadConfig();
+  if (name === 'queue') refreshQueue();
+}
+
+/* -------------------------------------------------------------------- */
+/* API helpers                                                            */
+/* -------------------------------------------------------------------- */
+async function apiFetch(path, options = {}) {
+  const url = API_BASE + path;
+  log(`→ ${options.method || 'GET'} ${url}`);
+  try {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+      ...options,
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    log(`← ${res.status} ${path} ${JSON.stringify(data).slice(0, 120)}`);
+    return { ok: res.ok, status: res.status, data };
+  } catch (err) {
+    log(`✗ ${path} ERROR: ${err.message}`);
+    return { ok: false, status: 0, data: { detail: err.message } };
+  }
+}
+
+/* -------------------------------------------------------------------- */
+/* Health                                                                 */
+/* -------------------------------------------------------------------- */
+async function refreshHealth() {
+  const { ok, data } = await apiFetch('/health');
+  const backendDot = document.getElementById('backend-dot');
+  const comfyDot = document.getElementById('comfyui-dot');
+  const backendLabel = document.getElementById('backend-status-label');
+  const comfyLabel = document.getElementById('comfyui-status-label');
+
+  if (ok) {
+    backendDot.className = 'status-dot ok';
+    backendLabel.textContent = 'Backend OK';
+    document.getElementById('stat-backend').textContent = '✓';
+    document.getElementById('stat-backend').className = 'stat-value ok';
+
+    if (data.comfyui_available) {
+      comfyDot.className = 'status-dot ok';
+      comfyLabel.textContent = 'ComfyUI OK';
+      document.getElementById('stat-comfyui').textContent = '✓';
+      document.getElementById('stat-comfyui').className = 'stat-value ok';
+    } else {
+      comfyDot.className = 'status-dot warn';
+      comfyLabel.textContent = 'ComfyUI ↓';
+      document.getElementById('stat-comfyui').textContent = '↓';
+      document.getElementById('stat-comfyui').className = 'stat-value warn';
+    }
+
+    document.getElementById('stat-gpu').textContent = data.gpu_tier || '—';
+    const uptime = Math.round(data.uptime_seconds || 0);
+    document.getElementById('stat-uptime').textContent = formatUptime(uptime);
+  } else {
+    backendDot.className = 'status-dot err';
+    backendLabel.textContent = 'Backend ↓';
+    comfyDot.className = 'status-dot err';
+    document.getElementById('stat-backend').textContent = '↓';
+    document.getElementById('stat-backend').className = 'stat-value err';
+  }
+}
+
+function formatUptime(s) {
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+}
+
+/* -------------------------------------------------------------------- */
+/* Presets                                                                */
+/* -------------------------------------------------------------------- */
+async function loadPresets() {
+  const { ok, data } = await apiFetch('/presets');
+  if (!ok) return;
+  _presetsCache = data;
+
+  // Sampler chips in generate panel
+  const presetChips = document.getElementById('preset-chips');
+  presetChips.innerHTML = '';
+  for (const [key, val] of Object.entries(data.samplers || {})) {
+    const chip = createChip(key, `${key} (${val.steps}s, cfg${val.cfg})`, key === _selectedPreset, 'preset-chips', () => { _selectedPreset = key; });
+    presetChips.appendChild(chip);
+  }
+
+  // Resolution chips
+  const resChips = document.getElementById('resolution-chips');
+  resChips.innerHTML = '';
+  for (const [key, val] of Object.entries(data.resolution || {})) {
+    const chip = createChip(key, `${key} (${val.width}×${val.height})`, key === _selectedResolution, 'resolution-chips', () => { _selectedResolution = key; });
+    resChips.appendChild(chip);
+  }
+
+  // LoRA chips
+  const loraChips = document.getElementById('lora-chips');
+  loraChips.innerHTML = '<div class="chip selected" data-value="" onclick="selectChip(\'lora-chips\', this)">None</div>';
+  for (const [key, val] of Object.entries(data.lora || {})) {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.dataset.value = key;
+    chip.textContent = key;
+    chip.title = val.description || key;
+    chip.onclick = function() { _selectedLora = key; selectChip('lora-chips', this); };
+    loraChips.appendChild(chip);
+  }
+
+  // Presets panel tables
+  renderPresetTables(data);
+}
+
+function createChip(value, label, selected, groupId, onSelect) {
+  const chip = document.createElement('div');
+  chip.className = 'chip' + (selected ? ' selected' : '');
+  chip.dataset.value = value;
+  chip.textContent = label;
+  chip.onclick = function() { onSelect(); selectChip(groupId, this); };
+  return chip;
+}
+
+function selectChip(groupId, el) {
+  document.querySelectorAll(`#${groupId} .chip`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function renderPresetTables(data) {
+  // Samplers
+  let html = '<table class="queue-table"><thead><tr><th>Name</th><th>Steps</th><th>CFG</th><th>Sampler</th><th>Scheduler</th><th>Description</th></tr></thead><tbody>';
+  for (const [k, v] of Object.entries(data.samplers || {})) {
+    html += `<tr><td>${k}</td><td>${v.steps}</td><td>${v.cfg}</td><td>${v.sampler_name}</td><td>${v.scheduler}</td><td style="color:var(--text-dim)">${v.description || ''}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('preset-table-wrap').innerHTML = html;
+
+  // Resolutions
+  html = '<table class="queue-table"><thead><tr><th>Name</th><th>Width</th><th>Height</th><th>MP</th></tr></thead><tbody>';
+  for (const [k, v] of Object.entries(data.resolution || {})) {
+    const mp = ((v.width * v.height) / 1e6).toFixed(1);
+    html += `<tr><td>${k}</td><td>${v.width}</td><td>${v.height}</td><td>${mp} MP</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('resolution-table-wrap').innerHTML = html;
+
+  // LoRAs
+  html = '<table class="queue-table"><thead><tr><th>Key</th><th>Filename</th><th>Strength</th><th>Description</th></tr></thead><tbody>';
+  for (const [k, v] of Object.entries(data.lora || {})) {
+    html += `<tr><td>${k}</td><td style="font-family:var(--mono)">${v.filename}</td><td>${v.strength_model}</td><td style="color:var(--text-dim)">${v.description || ''}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('lora-table-wrap').innerHTML = html;
+}
+
+/* -------------------------------------------------------------------- */
+/* Generate                                                               */
+/* -------------------------------------------------------------------- */
+async function submitGenerate() {
+  const positive = document.getElementById('gen-positive').value.trim();
+  if (!positive) { showAlert('gen-alert-err', 'Positive prompt is required.'); return; }
+
+  const seedVal = document.getElementById('gen-seed').value;
+  const payload = {
+    prompt: positive,
+    negative_prompt: document.getElementById('gen-negative').value.trim(),
+    preset: _selectedPreset,
+    resolution: _selectedResolution,
+    quality_tier: document.getElementById('gen-quality').value,
+  };
+  if (_selectedLora) payload.lora_style = _selectedLora;
+  if (seedVal !== '') payload.seed = parseInt(seedVal, 10);
+
+  hideAlerts();
+  setGenerating(true);
+
+  const { ok, data } = await apiFetch('/generate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (ok) {
+    showAlert('gen-alert-ok', `Queued! prompt_id: ${data.prompt_id} · job: ${data.job_id} · est. ${data.estimated_time}`);
+    document.getElementById('result-json').textContent = JSON.stringify(data, null, 2);
+    document.getElementById('result-json').style.display = 'block';
+    addActivity(`Generated: ${data.prompt_id.slice(0, 8)}… (${_selectedPreset} / ${_selectedResolution})`);
+  } else {
+    showAlert('gen-alert-err', `Error ${data.status}: ${data.detail || JSON.stringify(data)}`);
+  }
+
+  setGenerating(false);
+}
+
+function setGenerating(active) {
+  const btn = document.getElementById('gen-btn');
+  const prog = document.getElementById('gen-progress');
+  btn.disabled = active;
+  prog.style.display = active ? 'block' : 'none';
+  document.getElementById('gen-progress-label').textContent = active ? 'Queuing request…' : '';
+}
+
+function showAlert(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+
+function hideAlerts() {
+  ['gen-alert-ok', 'gen-alert-err'].forEach(id => {
+    document.getElementById(id).classList.remove('visible');
+  });
+}
+
+/* -------------------------------------------------------------------- */
+/* Queue                                                                  */
+/* -------------------------------------------------------------------- */
+async function refreshQueue() {
+  const { ok, data } = await apiFetch('/queue/status');
+  if (!ok) return;
+
+  const running = data.queue_running || [];
+  const pending = data.queue_pending || [];
+
+  document.getElementById('stat-queue-running').textContent = running.length;
+  document.getElementById('stat-queue-running').className = 'stat-value ' + (running.length ? 'warn' : 'ok');
+  document.getElementById('stat-queue-pending').textContent = pending.length;
+
+  // Running table
+  const runBody = document.getElementById('queue-running-body');
+  if (!running.length) {
+    runBody.innerHTML = '<tr><td colspan="3" style="color:var(--text-dim);">No running jobs.</td></tr>';
+  } else {
+    runBody.innerHTML = running.map(item => {
+      const pid = Array.isArray(item) ? item[1] : (item.prompt_id || JSON.stringify(item));
+      return `<tr>
+        <td>${pid}</td>
+        <td><span class="badge badge-warn">Running</span></td>
+        <td><button class="btn btn-danger" style="padding:4px 10px; font-size:11px;" onclick="cancelPrompt('${pid}')">Cancel</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Pending table
+  const pendBody = document.getElementById('queue-pending-body');
+  if (!pending.length) {
+    pendBody.innerHTML = '<tr><td colspan="3" style="color:var(--text-dim);">Queue is empty.</td></tr>';
+  } else {
+    pendBody.innerHTML = pending.map((item, i) => {
+      const pid = Array.isArray(item) ? item[1] : (item.prompt_id || JSON.stringify(item));
+      return `<tr>
+        <td>${pid}</td>
+        <td>${i + 1}</td>
+        <td><button class="btn btn-danger" style="padding:4px 10px; font-size:11px;" onclick="cancelPrompt('${pid}')">Cancel</button></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+async function cancelPrompt(promptId) {
+  if (!confirm(`Cancel prompt ${promptId}?`)) return;
+  const { ok, data } = await apiFetch(`/queue/${promptId}`, { method: 'DELETE' });
+  if (ok) {
+    log(`Cancelled: ${promptId}`);
+    addActivity(`Cancelled: ${promptId.slice(0, 8)}…`);
+    refreshQueue();
+  }
+}
+
+function confirmClearQueue() {
+  if (!confirm('Cancel all pending queue items?')) return;
+  log('Bulk clear not yet implemented on this backend. Cancel items individually.');
+}
+
+/* -------------------------------------------------------------------- */
+/* Config                                                                 */
+/* -------------------------------------------------------------------- */
+async function loadConfig() {
+  const { ok, data } = await apiFetch('/config');
+  document.getElementById('config-json').textContent = ok
+    ? JSON.stringify(data, null, 2)
+    : 'Error loading config.';
+}
+
+function saveApiBase() {
+  API_BASE = document.getElementById('api-base-input').value.trim().replace(/\/$/, '');
+  localStorage.setItem('raingod_api_base', API_BASE);
+  log('API base updated: ' + API_BASE);
+  refreshHealth();
+  loadPresets();
+}
+
+/* -------------------------------------------------------------------- */
+/* Activity log                                                           */
+/* -------------------------------------------------------------------- */
+const _activity = [];
+
+function addActivity(msg) {
+  const time = new Date().toLocaleTimeString();
+  _activity.unshift(`[${time}] ${msg}`);
+  if (_activity.length > 20) _activity.pop();
+  const el = document.getElementById('activity-log');
+  el.textContent = _activity.join('\n');
+}
+
+/* -------------------------------------------------------------------- */
+/* Debug log                                                              */
+/* -------------------------------------------------------------------- */
+function log(msg) {
+  const el = document.getElementById('log-output');
+  const time = new Date().toISOString().slice(11, 23);
+  el.textContent += `[${time}] ${msg}\n`;
+  if (document.getElementById('auto-scroll').checked) {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function clearLogs() {
+  document.getElementById('log-output').textContent = '';
+}
+</script>
+</body>
+</html>

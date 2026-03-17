@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>RainGod Comfy Studio</title>
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────────────── */
+    :root {
+      --bg:        #08080e;
+      --surface:   #0f0f1a;
+      --surface2:  #181828;
+      --border:    #1e1e38;
+      --accent:    #7c3aed;
+      --glow:      #a855f7;
+      --gold:      #f59e0b;
+      --ok:        #10b981;
+      --err:       #ef4444;
+      --warn:      #f59e0b;
+      --text:      #e2e0f5;
+      --muted:     #6b6890;
+      --mono:      "JetBrains Mono","Fira Code",monospace;
+      --sans:      "Inter",system-ui,sans-serif;
+      --r:         6px;
+      --t:         0.15s ease;
+      /* Node type colors */
+      --c-llm:     #3b82f6;
+      --c-vision:  #8b5cf6;
+      --c-image:   #ec4899;
+      --c-music:   #10b981;
+      --c-audio:   #f59e0b;
+      --c-output:  #6366f1;
+      --c-input:   #64748b;
+      --c-xmodal:  #f43f5e;
+    }
+
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;background:var(--bg);color:var(--text);
+              font-family:var(--sans);font-size:13px;overflow:hidden;}
+
+    /* ── App shell ──────────────────────────────────────────────────── */
+    .app{display:grid;grid-template-rows:48px 1fr;height:100vh;}
+
+    /* ── Topbar ─────────────────────────────────────────────────────── */
+    .topbar{display:flex;align-items:center;gap:8px;padding:0 16px;
+            background:var(--surface);border-bottom:1px solid var(--border);
+            z-index:100;}
+    .logo{font-size:15px;font-weight:800;letter-spacing:.06em;
+          background:linear-gradient(90deg,var(--accent),var(--glow));
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .logo-tag{font-size:10px;color:var(--muted);margin-left:2px;font-family:var(--mono);}
+    .topbar-sep{flex:1;}
+    .pill{display:flex;align-items:center;gap:5px;padding:3px 9px;
+          border-radius:20px;background:var(--surface2);border:1px solid var(--border);
+          font-size:11px;color:var(--muted);}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+    .dot.ok{background:var(--ok);box-shadow:0 0 5px var(--ok);}
+    .dot.err{background:var(--err);}
+    .dot.warn{background:var(--warn);}
+    .btn-top{padding:5px 12px;border:1px solid var(--border);border-radius:var(--r);
+             background:var(--surface2);color:var(--text);font-size:12px;
+             cursor:pointer;transition:all var(--t);}
+    .btn-top:hover{border-color:var(--accent);color:var(--glow);}
+    .btn-top.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .btn-top.primary:hover{background:var(--glow);}
+
+    /* ── Main area: sidebar + canvas ───────────────────────────────── */
+    .workspace{display:grid;grid-template-columns:220px 1fr 280px;height:100%;}
+
+    /* ── Sidebar ────────────────────────────────────────────────────── */
+    .sidebar{background:var(--surface);border-right:1px solid var(--border);
+             overflow-y:auto;padding:12px 0;display:flex;flex-direction:column;gap:4px;}
+    .sidebar-section{padding:8px 14px 4px;font-size:10px;font-weight:700;
+                     letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+    .node-btn{display:flex;align-items:center;gap:9px;padding:8px 16px;
+              cursor:pointer;user-select:none;border-radius:0;transition:background var(--t);}
+    .node-btn:hover{background:var(--surface2);}
+    .node-btn:active{background:rgba(124,58,237,.15);}
+    .nb-icon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;
+             justify-content:center;font-size:13px;flex-shrink:0;}
+    .nb-info{display:flex;flex-direction:column;}
+    .nb-name{font-size:12px;font-weight:600;}
+    .nb-desc{font-size:10px;color:var(--muted);margin-top:1px;}
+    /* node type colors */
+    .nt-llm   .nb-icon{background:rgba(59,130,246,.2);color:var(--c-llm);}
+    .nt-vision.nb-icon{background:rgba(139,92,246,.2);color:var(--c-vision);}
+    .nt-image .nb-icon{background:rgba(236,72,153,.2);color:var(--c-image);}
+    .nt-music .nb-icon{background:rgba(16,185,129,.2);color:var(--c-music);}
+    .nt-audio .nb-icon{background:rgba(245,158,11,.2);color:var(--c-audio);}
+    .nt-xmodal.nb-icon{background:rgba(244,63,94,.2);color:var(--c-xmodal);}
+    .nt-output.nb-icon{background:rgba(99,102,241,.2);color:var(--c-output);}
+    .nt-input .nb-icon{background:rgba(100,116,139,.2);color:var(--c-input);}
+
+    /* ── Canvas ─────────────────────────────────────────────────────── */
+    .canvas-wrap{position:relative;overflow:hidden;background:var(--bg);
+                 background-image:radial-gradient(circle,#1e1e38 1px,transparent 1px);
+                 background-size:28px 28px;}
+    #svg-layer{position:absolute;top:0;left:0;width:100%;height:100%;
+               pointer-events:none;z-index:1;}
+    #nodes-layer{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;}
+
+    /* ── Nodes ──────────────────────────────────────────────────────── */
+    .node{position:absolute;width:200px;background:var(--surface);
+          border:1px solid var(--border);border-radius:8px;
+          cursor:grab;user-select:none;transition:box-shadow var(--t);
+          z-index:10;}
+    .node:hover{box-shadow:0 0 0 1px var(--accent),0 8px 32px rgba(0,0,0,.4);}
+    .node.dragging{cursor:grabbing;z-index:100;
+                   box-shadow:0 0 0 2px var(--accent),0 16px 48px rgba(0,0,0,.6);}
+    .node.selected{box-shadow:0 0 0 2px var(--glow),0 8px 32px rgba(124,58,237,.3);}
+    .node-header{display:flex;align-items:center;gap:8px;padding:8px 10px 6px;
+                 border-bottom:1px solid var(--border);border-radius:7px 7px 0 0;}
+    .node-title-icon{font-size:14px;}
+    .node-title-text{font-size:12px;font-weight:700;flex:1;}
+    .node-badge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600;}
+    .node-body{padding:10px;}
+    .node-port-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+    .port{width:11px;height:11px;border-radius:50%;border:2px solid var(--border);
+          background:var(--surface2);cursor:crosshair;flex-shrink:0;
+          transition:all var(--t);}
+    .port:hover{transform:scale(1.4);background:var(--accent);border-color:var(--glow);}
+    .port.output{margin-left:auto;}
+    .port-label{font-size:10px;color:var(--muted);}
+    .node-field{margin-top:8px;}
+    .node-field label{display:block;font-size:10px;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+    .node-field textarea,.node-field input,.node-field select{
+      width:100%;background:var(--bg);border:1px solid var(--border);
+      border-radius:4px;color:var(--text);font-family:var(--sans);font-size:11px;
+      padding:5px 8px;outline:none;resize:vertical;}
+    .node-field textarea:focus,.node-field input:focus,.node-field select:focus{
+      border-color:var(--accent);}
+    .node-footer{padding:6px 10px 8px;display:flex;gap:6px;}
+    .run-btn{flex:1;padding:5px;border:none;border-radius:4px;font-size:11px;
+             font-weight:700;cursor:pointer;transition:all var(--t);}
+    .run-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .del-btn{padding:5px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);
+             border-radius:4px;color:var(--err);font-size:11px;cursor:pointer;}
+    .del-btn:hover{background:rgba(239,68,68,.2);}
+
+    /* ── Status badge on node ───────────────────────────────────────── */
+    .node-status{display:flex;align-items:center;gap:4px;padding:3px 8px 0;
+                 font-size:10px;color:var(--muted);}
+    .status-spinner{width:8px;height:8px;border:1.5px solid rgba(124,58,237,.2);
+                    border-top-color:var(--accent);border-radius:50%;
+                    animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ── Right panel ────────────────────────────────────────────────── */
+    .rpanel{background:var(--surface);border-left:1px solid var(--border);
+            overflow-y:auto;padding:16px;}
+    .rpanel-title{font-size:13px;font-weight:700;margin-bottom:14px;
+                  color:var(--text);}
+    .rpanel-section{margin-bottom:18px;}
+    .rpanel-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;
+                  color:var(--muted);margin-bottom:6px;}
+    .adapter-row{display:flex;align-items:center;justify-content:space-between;
+                 padding:6px 10px;background:var(--surface2);border-radius:5px;
+                 margin-bottom:4px;font-size:11px;}
+    .adapter-name{font-weight:600;}
+    .adapter-detail{font-size:10px;color:var(--muted);}
+    .result-card{background:var(--bg);border:1px solid var(--border);
+                 border-radius:var(--r);padding:10px;margin-bottom:8px;}
+    .result-label{font-size:10px;color:var(--muted);margin-bottom:4px;
+                  text-transform:uppercase;letter-spacing:.06em;}
+    .result-value{font-family:var(--mono);font-size:11px;color:var(--ok);
+                  word-break:break-all;}
+    pre.log-box{background:var(--bg);border:1px solid var(--border);
+                border-radius:var(--r);padding:10px;font-family:var(--mono);
+                font-size:10px;color:var(--muted);max-height:160px;overflow-y:auto;
+                white-space:pre-wrap;word-break:break-all;}
+
+    /* ── Scrollbars ─────────────────────────────────────────────────── */
+    ::-webkit-scrollbar{width:5px;height:5px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    ::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+    /* ── Connection lines ───────────────────────────────────────────── */
+    .conn-line{fill:none;stroke:var(--accent);stroke-width:2;
+               stroke-dasharray:0;opacity:.7;pointer-events:none;}
+    .conn-line:hover{opacity:1;stroke-width:3;}
+    .conn-preview{fill:none;stroke:var(--glow);stroke-width:1.5;
+                  stroke-dasharray:5 4;opacity:.6;pointer-events:none;}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ═══════════════ TOPBAR ═══════════════ -->
+  <div class="topbar">
+    <span class="logo">⚡ RAINGOD</span>
+    <span class="logo-tag">comfy studio v1</span>
+    <div style="width:1px;height:20px;background:var(--border);margin:0 6px;"></div>
+    <div class="pill"><div class="dot" id="ollama-dot"></div><span id="ollama-lbl">Ollama</span></div>
+    <div class="pill"><div class="dot" id="cloud-dot"></div><span id="cloud-lbl">Cloud</span></div>
+    <div class="topbar-sep"></div>
+    <button class="btn-top" onclick="clearCanvas()">🗑 Clear</button>
+    <button class="btn-top" onclick="runAll()">▶ Run All</button>
+    <button class="btn-top primary" onclick="addNode('cross_modal')">✨ Cross-Modal</button>
+  </div>
+
+  <!-- ═══════════════ WORKSPACE ═══════════════ -->
+  <div class="workspace">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">LLM Nodes</div>
+      <div class="node-btn nt-llm" onclick="addNode('llm_prompt')">
+        <div class="nb-icon">🧠</div>
+        <div class="nb-info"><div class="nb-name">LLM Prompt</div><div class="nb-desc">dolphin / Groq</div></div>
+      </div>
+      <div class="node-btn nt-llm" onclick="addNode('llm_reasoning')">
+        <div class="nb-icon">💭</div>
+        <div class="nb-info"><div class="nb-name">Reasoning</div><div class="nb-desc">deepseek-r1</div></div>
+      </div>
+      <div class="node-btn nt-llm" onclick="addNode('llm_tools')">
+        <div class="nb-icon">🔧</div>
+        <div class="nb-info"><div class="nb-name">Tool Use</div><div class="nb-desc">qwen3:4b / JSON</div></div>
+      </div>
+
+      <div class="sidebar-section">Visual</div>
+      <div class="node-btn" onclick="addNode('vision_analyze')" style="--nb-c:var(--c-vision)">
+        <div class="nb-icon" style="background:rgba(139,92,246,.2);color:var(--c-vision)">👁</div>
+        <div class="nb-info"><div class="nb-name">Vision</div><div class="nb-desc">moondream / Gemini</div></div>
+      </div>
+      <div class="node-btn" onclick="addNode('image_generate')">
+        <div class="nb-icon" style="background:rgba(236,72,153,.2);color:var(--c-image)">🎨</div>
+        <div class="nb-info"><div class="nb-name">Image Gen</div><div class="nb-desc">Comfy Cloud / SDXL</div></div>
+      </div>
+      <div class="node-btn" onclick="addNode('video_generate')">
+        <div class="nb-icon" style="background:rgba(236,72,153,.2);color:var(--c-image)">🎬</div>
+        <div class="nb-info"><div class="nb-name">Video Gen</div><div class="nb-desc">AnimateDiff cloud</div></div>
+      </div>
+
+      <div class="sidebar-section">Audio</div>
+      <div class="node-btn" onclick="addNode('music_generate')">
+        <div class="nb-icon" style="background:rgba(16,185,129,.2);color:var(--c-music)">🎵</div>
+        <div class="nb-info"><div class="nb-name">Music Gen</div><div class="nb-desc">Suno / AudioCraft</div></div>
+      </div>
+      <div class="node-btn" onclick="addNode('audio_process')">
+        <div class="nb-icon" style="background:rgba(245,158,11,.2);color:var(--c-audio)">🎛</div>
+        <div class="nb-info"><div class="nb-name">Audio FX</div><div class="nb-desc">Demucs stem sep</div></div>
+      </div>
+
+      <div class="sidebar-section">Pipeline</div>
+      <div class="node-btn" onclick="addNode('cross_modal')">
+        <div class="nb-icon" style="background:rgba(244,63,94,.2);color:var(--c-xmodal)">🔀</div>
+        <div class="nb-info"><div class="nb-name">Cross-Modal</div><div class="nb-desc">Full pipeline</div></div>
+      </div>
+
+      <div class="sidebar-section">IO</div>
+      <div class="node-btn" onclick="addNode('text_input')">
+        <div class="nb-icon" style="background:rgba(100,116,139,.2);color:var(--c-input)">📝</div>
+        <div class="nb-info"><div class="nb-name">Text Input</div><div class="nb-desc">Prompt source</div></div>
+      </div>
+      <div class="node-btn" onclick="addNode('output')">
+        <div class="nb-icon" style="background:rgba(99,102,241,.2);color:var(--c-output)">📤</div>
+        <div class="nb-info"><div class="nb-name">Output</div><div class="nb-desc">Collect results</div></div>
+      </div>
+    </div>
+
+    <!-- CANVAS -->
+    <div class="canvas-wrap" id="canvas" onmousemove="onCanvasMove(event)" onmouseup="onCanvasUp(event)">
+      <svg id="svg-layer"></svg>
+      <div id="nodes-layer"></div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="rpanel">
+      <div class="rpanel-title">Fleet Status</div>
+
+      <div class="rpanel-section">
+        <div class="rpanel-label">Local (Ollama)</div>
+        <div class="adapter-row">
+          <div><div class="adapter-name">dolphin-llama3:8b</div><div class="adapter-detail">4.7GB · uncensored</div></div>
+          <div class="dot ok"></div>
+        </div>
+        <div class="adapter-row">
+          <div><div class="adapter-name">qwen3:4b</div><div class="adapter-detail">2.5GB · tools</div></div>
+          <div class="dot ok"></div>
+        </div>
+        <div class="adapter-row">
+          <div><div class="adapter-name">deepseek-r1:1.5b</div><div class="adapter-detail">1.1GB · reasoning</div></div>
+          <div class="dot ok"></div>
+        </div>
+        <div class="adapter-row">
+          <div><div class="adapter-name">moondream:1.8b</div><div class="adapter-detail">1.7GB · vision</div></div>
+          <div class="dot ok"></div>
+        </div>
+        <div class="adapter-row">
+          <div><div class="adapter-name">nomic-embed</div><div class="adapter-detail">274MB · embeddings</div></div>
+          <div class="dot ok"></div>
+        </div>
+      </div>
+
+      <div class="rpanel-section">
+        <div class="rpanel-label">Cloud Fleet</div>
+        <div id="cloud-adapters">
+          <div class="adapter-row"><div><div class="adapter-name">Comfy Cloud</div><div class="adapter-detail">RTX Pro 6000 · 400cr/mo</div></div><div class="dot" id="dot-comfy"></div></div>
+          <div class="adapter-row"><div><div class="adapter-name">Groq</div><div class="adapter-detail">LPU · 14400 req/day</div></div><div class="dot" id="dot-groq"></div></div>
+          <div class="adapter-row"><div><div class="adapter-name">Gemini Flash</div><div class="adapter-detail">Multimodal free</div></div><div class="dot" id="dot-gemini"></div></div>
+          <div class="adapter-row"><div><div class="adapter-name">Suno</div><div class="adapter-detail">50 songs/day</div></div><div class="dot" id="dot-suno"></div></div>
+          <div class="adapter-row"><div><div class="adapter-name">OpenRouter</div><div class="adapter-detail">300+ :free models</div></div><div class="dot" id="dot-or"></div></div>
+          <div class="adapter-row"><div><div class="adapter-name">HuggingFace</div><div class="adapter-detail">AudioCraft · Demucs</div></div><div class="dot" id="dot-hf"></div></div>
+          <div class="adapter-row"><div><div class="adapter-name">Replicate</div><div class="adapter-detail">$5 credit overflow</div></div><div class="dot" id="dot-rep"></div></div>
+        </div>
+      </div>
+
+      <div class="rpanel-section">
+        <div class="rpanel-label">Last Result</div>
+        <div id="last-result">
+          <div class="result-card"><div class="result-label">Status</div><div class="result-value" style="color:var(--muted)">Idle — run a node</div></div>
+        </div>
+      </div>
+
+      <div class="rpanel-section">
+        <div class="rpanel-label">Activity Log</div>
+        <pre class="log-box" id="activity-log">RainGod Studio ready.\n</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── State ─────────────────────────────────────────────────────────── */
+const API = localStorage.getItem('raingod_api') || 'http://localhost:8000';
+let nodes = {};
+let connections = [];
+let drag = null;          // {nodeId, offX, offY}
+let connDraft = null;     // {fromNodeId, fromPort, x, y}
+let nodeCounter = 0;
+
+/* ── Node type definitions ─────────────────────────────────────────── */
+const NODE_DEFS = {
+  llm_prompt: {
+    label: 'LLM Prompt', icon: '🧠', color: 'var(--c-llm)',
+    bg: 'rgba(59,130,246,.12)', border: 'rgba(59,130,246,.3)',
+    badge: 'dolphin', badgeColor: 'rgba(59,130,246,.2)',
+    inputs: ['text_in'], outputs: ['text_out'],
+    fields: [{key:'prompt',type:'textarea',label:'Prompt',placeholder:'Enter your prompt…'}],
+    task: 'llm_prompt',
+  },
+  llm_reasoning: {
+    label: 'Reasoning', icon: '💭', color: 'var(--c-llm)',
+    bg: 'rgba(59,130,246,.12)', border: 'rgba(59,130,246,.3)',
+    badge: 'deepseek-r1', badgeColor: 'rgba(59,130,246,.2)',
+    inputs: ['text_in'], outputs: ['reasoning_out'],
+    fields: [{key:'prompt',type:'textarea',label:'Problem',placeholder:'What to reason about…'}],
+    task: 'llm_reasoning',
+  },
+  llm_tools: {
+    label: 'Tool Use', icon: '🔧', color: 'var(--c-llm)',
+    bg: 'rgba(59,130,246,.12)', border: 'rgba(59,130,246,.3)',
+    badge: 'qwen3:4b', badgeColor: 'rgba(59,130,246,.2)',
+    inputs: ['text_in'], outputs: ['json_out'],
+    fields: [{key:'prompt',type:'textarea',label:'Instruction',placeholder:'Describe the task…'}],
+    task: 'llm_tools',
+  },
+  vision_analyze: {
+    label: 'Vision', icon: '👁', color: 'var(--c-vision)',
+    bg: 'rgba(139,92,246,.12)', border: 'rgba(139,92,246,.3)',
+    badge: 'moondream', badgeColor: 'rgba(139,92,246,.2)',
+    inputs: ['image_in'], outputs: ['text_out'],
+    fields: [
+      {key:'question',type:'text',label:'Question',placeholder:'Describe this image…'},
+      {key:'image_url',type:'text',label:'Image URL',placeholder:'https://…'},
+    ],
+    task: 'vision_analyze',
+  },
+  image_generate: {
+    label: 'Image Gen', icon: '🎨', color: 'var(--c-image)',
+    bg: 'rgba(236,72,153,.12)', border: 'rgba(236,72,153,.3)',
+    badge: 'ComfyCloud', badgeColor: 'rgba(236,72,153,.2)',
+    inputs: ['text_in'], outputs: ['image_out'],
+    fields: [
+      {key:'prompt',type:'textarea',label:'Prompt',placeholder:'Visual description…'},
+      {key:'preset',type:'select',label:'Quality',opts:['fast','quality','ultra']},
+      {key:'resolution',type:'select',label:'Resolution',opts:['thumbnail','cover_art','high_res','4k']},
+    ],
+    task: 'image_generate',
+  },
+  video_generate: {
+    label: 'Video Gen', icon: '🎬', color: 'var(--c-image)',
+    bg: 'rgba(236,72,153,.12)', border: 'rgba(236,72,153,.3)',
+    badge: 'AnimateDiff', badgeColor: 'rgba(236,72,153,.2)',
+    inputs: ['text_in','image_in'], outputs: ['video_out'],
+    fields: [{key:'prompt',type:'textarea',label:'Motion Prompt',placeholder:'Describe the animation…'}],
+    task: 'video_generate',
+  },
+  music_generate: {
+    label: 'Music Gen', icon: '🎵', color: 'var(--c-music)',
+    bg: 'rgba(16,185,129,.12)', border: 'rgba(16,185,129,.3)',
+    badge: 'Suno', badgeColor: 'rgba(16,185,129,.2)',
+    inputs: ['text_in'], outputs: ['audio_out'],
+    fields: [
+      {key:'prompt',type:'textarea',label:'Song Description',placeholder:'Genre, mood, tempo…'},
+      {key:'duration',type:'select',label:'Duration',opts:['30','60']},
+    ],
+    task: 'music_generate',
+  },
+  audio_process: {
+    label: 'Audio FX', icon: '🎛', color: 'var(--c-audio)',
+    bg: 'rgba(245,158,11,.12)', border: 'rgba(245,158,11,.3)',
+    badge: 'Demucs', badgeColor: 'rgba(245,158,11,.2)',
+    inputs: ['audio_in'], outputs: ['stems_out'],
+    fields: [{key:'audio_url',type:'text',label:'Audio URL',placeholder:'https://…'}],
+    task: 'audio_process',
+  },
+  cross_modal: {
+    label: 'Cross-Modal', icon: '🔀', color: 'var(--c-xmodal)',
+    bg: 'rgba(244,63,94,.12)', border: 'rgba(244,63,94,.3)',
+    badge: 'pipeline', badgeColor: 'rgba(244,63,94,.2)',
+    inputs: [], outputs: ['image_out','audio_out'],
+    fields: [
+      {key:'prompt',type:'textarea',label:'Creative Concept',placeholder:'Dark cyberpunk rain scene, melancholic…'},
+      {key:'width',type:'text',label:'Width',placeholder:'1024'},
+      {key:'height',type:'text',label:'Height',placeholder:'1024'},
+    ],
+    task: 'cross_modal',
+  },
+  text_input: {
+    label: 'Text Input', icon: '📝', color: 'var(--c-input)',
+    bg: 'rgba(100,116,139,.1)', border: 'rgba(100,116,139,.3)',
+    badge: 'source', badgeColor: 'rgba(100,116,139,.2)',
+    inputs: [], outputs: ['text_out'],
+    fields: [{key:'value',type:'textarea',label:'Text',placeholder:'Enter text…'}],
+    task: null,
+  },
+  output: {
+    label: 'Output', icon: '📤', color: 'var(--c-output)',
+    bg: 'rgba(99,102,241,.1)', border: 'rgba(99,102,241,.3)',
+    badge: 'sink', badgeColor: 'rgba(99,102,241,.2)',
+    inputs: ['any_in'], outputs: [],
+    fields: [],
+    task: null,
+  },
+};
+
+/* ── Create node ───────────────────────────────────────────────────── */
+function addNode(type, x, y) {
+  const def = NODE_DEFS[type];
+  if (!def) return;
+  const id = `n${++nodeCounter}`;
+  const cx = x ?? (160 + Math.random() * 400);
+  const cy = y ?? (100 + Math.random() * 300);
+  nodes[id] = { id, type, def, x: cx, y: cy, values: {}, status: 'idle', result: null };
+  renderNode(id);
+  return id;
+}
+
+function renderNode(id) {
+  const n = nodes[id];
+  const def = n.def;
+  const el = document.createElement('div');
+  el.className = 'node';
+  el.id = `node-${id}`;
+  el.style.left = n.x + 'px';
+  el.style.top  = n.y + 'px';
+  el.style.borderColor = def.border;
+  el.style.background  = def.bg;
+
+  // Header
+  const header = `
+    <div class="node-header" style="border-bottom-color:${def.border}">
+      <span class="node-title-icon">${def.icon}</span>
+      <span class="node-title-text">${def.label}</span>
+      <span class="node-badge" style="background:${def.badgeColor};color:${def.color}">${def.badge}</span>
+    </div>`;
+
+  // Ports
+  let ports = '';
+  const maxPorts = Math.max(def.inputs.length, def.outputs.length);
+  for (let i = 0; i < maxPorts; i++) {
+    const inp = def.inputs[i];
+    const out = def.outputs[i];
+    ports += `<div class="node-port-row">
+      ${inp ? `<div class="port input" id="${id}-in-${inp}" data-node="${id}" data-port="${inp}" data-dir="in" onmousedown="startConn(event,'${id}','${inp}','in')"></div><span class="port-label">${inp}</span>` : '<div style="width:11px"></div><span></span>'}
+      ${out ? `<span class="port-label" style="margin-left:auto">${out}</span><div class="port output" id="${id}-out-${out}" data-node="${id}" data-port="${out}" data-dir="out" onmousedown="startConn(event,'${id}','${out}','out')"></div>` : ''}
+    </div>`;
+  }
+
+  // Fields
+  let fields = '';
+  for (const f of def.fields) {
+    const val = n.values[f.key] || '';
+    if (f.type === 'textarea') {
+      fields += `<div class="node-field"><label>${f.label}</label>
+        <textarea rows="3" placeholder="${f.placeholder||''}" oninput="setVal('${id}','${f.key}',this.value)">${val}</textarea></div>`;
+    } else if (f.type === 'select') {
+      const opts = (f.opts||[]).map(o=>`<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('');
+      fields += `<div class="node-field"><label>${f.label}</label>
+        <select onchange="setVal('${id}','${f.key}',this.value)">${opts}</select></div>`;
+    } else {
+      fields += `<div class="node-field"><label>${f.label}</label>
+        <input type="text" placeholder="${f.placeholder||''}" value="${val}" oninput="setVal('${id}','${f.key}',this.value)"/></div>`;
+    }
+  }
+
+  // Footer
+  const footer = `
+    <div class="node-footer">
+      ${def.task ? `<button class="run-btn" id="run-${id}" style="background:${def.border};color:${def.color}" onclick="runNode('${id}')">▶ Run</button>` : ''}
+      <button class="del-btn" onclick="deleteNode('${id}')">✕</button>
+    </div>
+    <div class="node-status" id="status-${id}"></div>`;
+
+  el.innerHTML = header + `<div class="node-body">${ports}${fields}</div>` + footer;
+
+  // Drag
+  el.querySelector('.node-header').addEventListener('mousedown', e => {
+    if (e.target.classList.contains('port')) return;
+    drag = { nodeId: id, offX: e.clientX - n.x - canvasRect().left, offY: e.clientY - n.y - canvasRect().top };
+    el.classList.add('dragging');
+    e.preventDefault();
+  });
+
+  document.getElementById('nodes-layer').appendChild(el);
+}
+
+function setVal(id, key, val) { nodes[id].values[key] = val; }
+
+function canvasRect() { return document.getElementById('canvas').getBoundingClientRect(); }
+
+/* ── Drag ──────────────────────────────────────────────────────────── */
+function onCanvasMove(e) {
+  const rect = canvasRect();
+  if (drag) {
+    const x = e.clientX - drag.offX - rect.left;
+    const y = e.clientY - drag.offY - rect.top;
+    nodes[drag.nodeId].x = x;
+    nodes[drag.nodeId].y = y;
+    const el = document.getElementById(`node-${drag.nodeId}`);
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    drawConnections();
+  }
+  if (connDraft) {
+    connDraft.x = e.clientX - rect.left;
+    connDraft.y = e.clientY - rect.top;
+    drawConnections();
+  }
+}
+
+function onCanvasUp(e) {
+  if (drag) {
+    document.getElementById(`node-${drag.nodeId}`)?.classList.remove('dragging');
+    drag = null;
+  }
+  if (connDraft) { connDraft = null; drawConnections(); }
+}
+
+/* ── Connections ───────────────────────────────────────────────────── */
+function startConn(e, nodeId, port, dir) {
+  e.stopPropagation();
+  const rect = canvasRect();
+  const portEl = document.getElementById(dir==='out' ? `${nodeId}-out-${port}` : `${nodeId}-in-${port}`);
+  const pr = portEl.getBoundingClientRect();
+  connDraft = {
+    fromNodeId: nodeId, fromPort: port, fromDir: dir,
+    x: pr.left + 5.5 - rect.left, y: pr.top + 5.5 - rect.top,
+    startX: pr.left + 5.5 - rect.left, startY: pr.top + 5.5 - rect.top,
+  };
+  // On mouseup over another port — finish connection
+  document.addEventListener('mouseup', finishConn, { once: true });
+  e.preventDefault();
+}
+
+function finishConn(e) {
+  if (!connDraft) return;
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if (target?.classList.contains('port')) {
+    const toNodeId = target.dataset.node;
+    const toPort   = target.dataset.port;
+    const toDir    = target.dataset.dir;
+    if (toNodeId && toNodeId !== connDraft.fromNodeId && toDir !== connDraft.fromDir) {
+      const from = connDraft.fromDir === 'out' ? connDraft : {nodeId: toNodeId, port: toPort};
+      const to   = connDraft.fromDir === 'in'  ? connDraft : {nodeId: toNodeId, port: toPort};
+      connections.push({
+        fromNodeId: connDraft.fromDir==='out' ? connDraft.fromNodeId : toNodeId,
+        fromPort:   connDraft.fromDir==='out' ? connDraft.fromPort   : toPort,
+        toNodeId:   connDraft.fromDir==='in'  ? connDraft.fromNodeId : toNodeId,
+        toPort:     connDraft.fromDir==='in'  ? connDraft.fromPort   : toPort,
+      });
+      log(`Connected ${connDraft.fromNodeId}→${toNodeId}`);
+    }
+  }
+  connDraft = null;
+  drawConnections();
+}
+
+function getPortCenter(nodeId, port, dir) {
+  const el = document.getElementById(`${nodeId}-${dir}-${port}`);
+  if (!el) return {x:0,y:0};
+  const cr = canvasRect();
+  const pr = el.getBoundingClientRect();
+  return {x: pr.left + 5.5 - cr.left, y: pr.top + 5.5 - cr.top};
+}
+
+function cubicPath(x1,y1,x2,y2) {
+  const dx = Math.abs(x2-x1) * 0.5;
+  return `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
+}
+
+function drawConnections() {
+  const svg = document.getElementById('svg-layer');
+  svg.innerHTML = '';
+  for (const c of connections) {
+    const a = getPortCenter(c.fromNodeId, c.fromPort, 'out');
+    const b = getPortCenter(c.toNodeId,   c.toPort,   'in');
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('class','conn-line');
+    path.setAttribute('d', cubicPath(a.x,a.y,b.x,b.y));
+    svg.appendChild(path);
+  }
+  if (connDraft) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('class','conn-preview');
+    path.setAttribute('d', cubicPath(connDraft.startX,connDraft.startY,connDraft.x,connDraft.y));
+    svg.appendChild(path);
+  }
+}
+
+/* ── Run node ──────────────────────────────────────────────────────── */
+async function runNode(id) {
+  const n = nodes[id];
+  if (!n.def.task) return;
+  setStatus(id, 'running');
+  const payload = { ...n.values };
+
+  // Collect upstream text from connected nodes
+  const upText = connections
+    .filter(c => c.toNodeId === id)
+    .map(c => nodes[c.fromNodeId]?.result?.text || nodes[c.fromNodeId]?.result?.audio_url || '')
+    .filter(Boolean).join('\n');
+  if (upText && !payload.prompt) payload.prompt = upText;
+
+  try {
+    const resp = await fetch(`${API}/dispatch`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ task_type: n.def.task, payload }),
+    });
+    const data = await resp.json();
+    n.result = data.data || data;
+    setStatus(id, 'done');
+    showResult(n);
+    log(`✅ ${n.def.label} [${id}] → ${data.source || 'ok'}`);
+  } catch (err) {
+    setStatus(id, 'error', err.message);
+    log(`❌ ${n.def.label} [${id}]: ${err.message}`);
+  }
+}
+
+async function runAll() {
+  for (const id of Object.keys(nodes)) {
+    if (nodes[id].def.task) await runNode(id);
+  }
+}
+
+function setStatus(id, state, detail) {
+  const el = document.getElementById(`status-${id}`);
+  const run = document.getElementById(`run-${id}`);
+  if (!el) return;
+  if (state === 'running') {
+    el.innerHTML = '<div class="status-spinner"></div><span style="color:var(--muted)">Running…</span>';
+    if (run) run.disabled = true;
+  } else if (state === 'done') {
+    el.innerHTML = '<span style="color:var(--ok)">✓ Done</span>';
+    if (run) { run.disabled = false; run.textContent = '▶ Run'; }
+  } else if (state === 'error') {
+    el.innerHTML = `<span style="color:var(--err)">✗ ${detail||'Error'}</span>`;
+    if (run) run.disabled = false;
+  } else {
+    el.innerHTML = '';
+  }
+}
+
+function showResult(n) {
+  const r = n.result;
+  if (!r) return;
+  const el = document.getElementById('last-result');
+  const items = [];
+  if (r.text)      items.push(['Text',    r.text.slice(0,120)+'…']);
+  if (r.image_url) items.push(['Image',   `<a href="${r.image_url}" target="_blank">${r.image_url.slice(0,60)}</a>`]);
+  if (r.audio_url) items.push(['Audio',   r.audio_url.slice(0,60)]);
+  if (r.prompt_id) items.push(['PromptID',r.prompt_id]);
+  if (r.clip_id)   items.push(['ClipID',  r.clip_id]);
+  if (r.embedding) items.push(['Embed',   `[${r.embedding.slice(0,3).map(v=>v.toFixed(3)).join(', ')} …]`]);
+  el.innerHTML = items.map(([l,v])=>`<div class="result-card"><div class="result-label">${l}</div><div class="result-value">${v}</div></div>`).join('');
+  if (!items.length) el.innerHTML = `<div class="result-card"><div class="result-label">Raw</div><div class="result-value">${JSON.stringify(r).slice(0,140)}</div></div>`;
+}
+
+/* ── Delete / clear ─────────────────────────────────────────────────── */
+function deleteNode(id) {
+  document.getElementById(`node-${id}`)?.remove();
+  delete nodes[id];
+  connections = connections.filter(c=>c.fromNodeId!==id && c.toNodeId!==id);
+  drawConnections();
+}
+function clearCanvas() {
+  document.getElementById('nodes-layer').innerHTML='';
+  document.getElementById('svg-layer').innerHTML='';
+  nodes={};connections=[];nodeCounter=0;
+}
+
+/* ── Log ────────────────────────────────────────────────────────────── */
+function log(msg) {
+  const el = document.getElementById('activity-log');
+  el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ── Fleet health check ─────────────────────────────────────────────── */
+async function checkFleet() {
+  // Ollama
+  try {
+    const r = await fetch(`${window.OLLAMA_HOST||'http://localhost:11434'}/api/tags`,{signal:AbortSignal.timeout(3000)});
+    const d = r.ok ? {ok:true} : {ok:false};
+    document.getElementById('ollama-dot').className = d.ok ? 'dot ok' : 'dot err';
+    document.getElementById('ollama-lbl').textContent = d.ok ? 'Ollama ✓' : 'Ollama ✗';
+  } catch { 
+    document.getElementById('ollama-dot').className='dot warn';
+    document.getElementById('ollama-lbl').textContent='Ollama ?';
+  }
+
+  // Backend (dispatcher) status
+  try {
+    const r = await fetch(`${API}/dispatch/status`,{signal:AbortSignal.timeout(4000)});
+    const d = await r.json();
+    document.getElementById('cloud-dot').className = 'dot ok';
+    document.getElementById('cloud-lbl').textContent = 'Cloud ✓';
+    // Per-adapter dots
+    const dotMap = {comfy_cloud:'dot-comfy',groq:'dot-groq',gemini:'dot-gemini',
+                    suno:'dot-suno',openrouter:'dot-or',huggingface:'dot-hf',replicate:'dot-rep'};
+    for (const [k,dotId] of Object.entries(dotMap)) {
+      const el = document.getElementById(dotId);
+      if (el) el.className = d[k] ? 'dot ok' : 'dot err';
+    }
+  } catch {
+    document.getElementById('cloud-dot').className='dot warn';
+    document.getElementById('cloud-lbl').textContent='Cloud ?';
+  }
+}
+
+/* ── Boot ───────────────────────────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  // Welcome nodes
+  const id1 = addNode('text_input', 100, 120);
+  const id2 = addNode('llm_prompt', 360, 120);
+  const id3 = addNode('image_generate', 620, 80);
+  const id4 = addNode('music_generate', 620, 310);
+  connections.push({fromNodeId:id1,fromPort:'text_out',toNodeId:id2,toPort:'text_in'});
+  connections.push({fromNodeId:id2,fromPort:'text_out',toNodeId:id3,toPort:'text_in'});
+  connections.push({fromNodeId:id2,fromPort:'text_out',toNodeId:id4,toPort:'text_in'});
+
+  setTimeout(drawConnections, 60);
+  checkFleet();
+  setInterval(checkFleet, 30000);
+  log('Studio loaded. Fleet check running…');
+});
+</script>
+</body>
+</html>
