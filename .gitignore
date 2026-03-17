@@ -1,0 +1,138 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+ENV/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Test / Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.ruff_cache/
+
+# Distribution
+sdist/
+*.tar.gz
+*.whl
+WHEEL
+RECORD
+
+# ============================================================
+# Node.js / Switchboard UI
+# ============================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.next/
+.cache/
+
+# ============================================================
+# ComfyUI & Models
+# ============================================================
+models/
+checkpoints/
+loras/
+vae/
+*.safetensors
+*.ckpt
+*.pt
+*.bin
+*.pth
+comfyui/
+ComfyUI/
+
+# ============================================================
+# Generated Outputs
+# ============================================================
+outputs/
+temp/
+cache/
+logs/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+!DEVIANT2026_small.gif
+*.mp4
+*.mov
+*.webm
+
+# ============================================================
+# Archive / zip files — never commit these
+# ============================================================
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# ============================================================
+# Accidental paths
+# ============================================================
+files/mnt/
+mnt/
+
+# ============================================================
+# Secrets & Environment
+# ============================================================
+.env
+.env.*
+!.env.example
+secrets.json
+*.key
+*.pem
+*.p12
+
+# ============================================================
+# IDE & OS
+# ============================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# ============================================================
+# Docker
+# ============================================================
+.dockerignore
+docker-compose.override.yml
+
+# ============================================================
+# Git LFS candidates
+# ============================================================
+# DEVIANT2026_small.gif is 12 MB — migrate with:
+#   git lfs track "*.gif"
+#   git add .gitattributes
+#   git rm --cached DEVIANT2026_small.gif
+#   git add DEVIANT2026_small.gif
+#   git commit -m "chore: migrate GIF to Git LFS"

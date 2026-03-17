@@ -1,0 +1,40 @@
+name: PSScriptAnalyzer PowerShell Scan
+
+permissions:
+  contents: read
+  security-events: write
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "**.ps1"
+      - "**.psm1"
+      - "**.psd1"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.ps1"
+
+jobs:
+  psscriptanalyzer:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Run PSScriptAnalyzer
+        uses: microsoft/psscriptanalyzer-action@v1.1
+        with:
+          path: ./
+          recurse: true
+          output: results.sarif
+          exitCode: 0
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
