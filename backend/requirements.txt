@@ -24,7 +24,7 @@ Pillow==12.1.1
 
 # Logging
 rich==13.7.1
-python-json-logger==2.0.7
+python-json-logger==4.0.0
 
 # Env management
 python-dotenv==1.0.1
