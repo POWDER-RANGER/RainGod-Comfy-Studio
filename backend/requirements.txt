@@ -27,7 +27,7 @@ rich==13.7.1
 python-json-logger==2.0.7
 
 # Env management
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 
 # ============================================================
 # Dev/Test Dependencies (not installed in production stage)
