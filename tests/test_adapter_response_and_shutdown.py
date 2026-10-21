@@ -14,6 +14,12 @@ def _response(payload: dict) -> MagicMock:
     return response
 
 
+def _async_client_mock() -> MagicMock:
+    client = MagicMock()
+    client.aclose = AsyncMock()
+    return client
+
+
 @pytest.mark.asyncio
 async def test_gemini_generate_and_vision_parse_text(monkeypatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
@@ -21,12 +27,13 @@ async def test_gemini_generate_and_vision_parse_text(monkeypatch) -> None:
 
     adapter = GeminiAdapter()
     response = _response({"candidates": [{"content": {"parts": [{"text": "answer"}]}}]})
-    adapter._client = MagicMock()
+    adapter._client = _async_client_mock()
     adapter._client.post = AsyncMock(return_value=response)
 
     assert await adapter.generate("prompt") == "answer"
     assert await adapter.vision("describe", image_b64="aW1hZ2U=") == "answer"
     await adapter.close()
+    adapter._client.aclose.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
@@ -35,7 +42,7 @@ async def test_openrouter_generate_and_models_parse_response(monkeypatch) -> Non
     from backend.adapters.openrouter_adapter import OpenRouterAdapter
 
     adapter = OpenRouterAdapter()
-    adapter._client = MagicMock()
+    adapter._client = _async_client_mock()
     adapter._client.post = AsyncMock(
         return_value=_response({"choices": [{"message": {"content": "answer"}}]})
     )
@@ -44,6 +51,7 @@ async def test_openrouter_generate_and_models_parse_response(monkeypatch) -> Non
     assert await adapter.generate("prompt") == "answer"
     assert await adapter.models() == [{"id": "model-1"}]
     await adapter.close()
+    adapter._client.aclose.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
@@ -52,21 +60,22 @@ async def test_groq_generate_parses_response(monkeypatch) -> None:
     from backend.adapters.groq_adapter import GroqAdapter
 
     adapter = GroqAdapter()
-    adapter._client = MagicMock()
+    adapter._client = _async_client_mock()
     adapter._client.post = AsyncMock(
         return_value=_response({"choices": [{"message": {"content": "answer"}}]})
     )
 
     assert await adapter.generate("prompt") == "answer"
     await adapter.close()
+    adapter._client.aclose.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
 async def test_ollama_response_parsers(monkeypatch) -> None:
-    from backend.adapters.ollama_adapter import OllamaAdapter
+    import backend.adapters.ollama_adapter as ollama_module
 
-    adapter = OllamaAdapter()
-    adapter._client = MagicMock()
+    adapter = ollama_module.OllamaAdapter()
+    adapter._client = _async_client_mock()
     adapter._client.post = AsyncMock(
         side_effect=[
             _response({"response": "generated"}),
@@ -76,11 +85,20 @@ async def test_ollama_response_parsers(monkeypatch) -> None:
         ]
     )
 
+    image_response = _response({})
+    image_response.content = b"image"
+    fetch_client = MagicMock()
+    fetch_client.__aenter__ = AsyncMock(return_value=fetch_client)
+    fetch_client.__aexit__ = AsyncMock(return_value=None)
+    fetch_client.get = AsyncMock(return_value=image_response)
+    monkeypatch.setattr(ollama_module.httpx, "AsyncClient", lambda **kwargs: fetch_client)
+
     assert await adapter.generate("prompt") == "generated"
     assert await adapter.chat([{"role": "user", "content": "hello"}]) == "chat"
     assert await adapter.vision("https://image.invalid/test.png") == "vision"
     assert await adapter.embed("text") == [0.1, 0.2]
     await adapter.close()
+    adapter._client.aclose.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
