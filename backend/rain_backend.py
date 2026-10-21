@@ -450,12 +450,41 @@ async def read_project(
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found")
         project["jobs"] = project_store.list_project_jobs(project_id)
+        project["assets"] = project_store.list_project_assets(project_id)
+        for asset in project["assets"]:
+            asset["url"] = f"/projects/{project_id}/assets/{asset['id']}"
         return project
     except HTTPException:
         raise
     except Exception as exc:
         logger.exception("Could not read project")
         raise HTTPException(status_code=503, detail="Project storage is unavailable") from exc
+
+
+@app.get(
+    "/projects/{project_id}/assets/{asset_id}",
+    summary="Retrieve a locally persisted project image",
+)
+async def read_project_asset(
+    project_id: Annotated[str, FPath(min_length=1, max_length=64)],
+    asset_id: Annotated[str, FPath(min_length=1, max_length=64)],
+) -> Response:
+    """Read image bytes from local project storage rather than ComfyUI history."""
+    try:
+        asset, content = project_store.load_project_asset(project_id, asset_id)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="Project asset not found")
+        assert content is not None
+        return Response(
+            content=content,
+            media_type=asset["mime_type"],
+            headers={"Cache-Control": "no-store"},
+        )
+    except HTTPException:
+        raise
+    except OSError as exc:
+        logger.exception("Could not read local project asset")
+        raise HTTPException(status_code=503, detail="Project asset storage is unavailable") from exc
 
 
 @app.post("/batch-generate", status_code=202)
@@ -588,7 +617,18 @@ async def get_job_image(
             detail="Unable to retrieve the generated image from ComfyUI",
         ) from exc
 
-    return Response(content=content, media_type=media_type, headers={"Cache-Control": "no-store"})
+    try:
+        asset = project_store.save_project_asset(prompt_id, image["filename"], media_type, content)
+    except ValueError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Could not persist generated project image")
+        raise HTTPException(status_code=503, detail="Project asset storage is unavailable") from exc
+
+    headers = {"Cache-Control": "no-store"}
+    if asset is not None:
+        headers["X-RainGod-Asset-ID"] = asset["id"]
+    return Response(content=content, media_type=media_type, headers=headers)
 
 
 @app.get("/outputs/{filename}", summary="Retrieve generated image")

@@ -80,9 +80,9 @@ Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` i
 
 ### Local project records (development only)
 
-`POST /projects` creates a project and `GET /projects/{project_id}` returns its metadata and recorded generation jobs. To attach a ComfyUI request to a project, include its `project_id` and `"approved": true` in `POST /generate`. The local SQLite database defaults to `.raingod/raingod.sqlite3`; set `RAINGOD_DB_PATH` to choose another location. Jobs retain their prompt/settings, approval decision, seed/workflow settings, provider run ID, and submission state across API restarts.
+`POST /projects` creates a project and `GET /projects/{project_id}` returns its metadata, recorded generation jobs, and saved assets. To attach a ComfyUI request to a project, include its `project_id` and `"approved": true` in `POST /generate`. The local SQLite database defaults to `.raingod/raingod.sqlite3`; set `RAINGOD_DB_PATH` to choose another location. Jobs retain their prompt/settings, approval decision, seed/workflow settings, provider run ID, and submission state across API restarts. When a project-linked image is retrieved from ComfyUI, the studio copies the bytes into `.raingod/assets` and records their MIME type, byte size, and SHA-256 hash. The saved copy is served from `/projects/{project_id}/assets/{asset_id}` and verified against its stored hash when read.
 
-This is an initial local persistence slice. It does not yet save generated image bytes as project assets, reconcile job state after a restart, provide authentication or per-user access control, or support shared/multi-instance operation. Do not expose this API publicly or use the SQLite file as a cloud datastore. Private deployment still needs authenticated access, managed PostgreSQL, private object storage, and a recovery-capable worker/queue before real staging can meet the product milestone.
+This is an initial local persistence slice. It saves image bytes only when a client retrieves them, so it does not yet automatically capture an output before ComfyUI history expires or recover queued/running jobs after a restart. It also has no authentication or per-user access control and does not support shared/multi-instance operation. Do not expose this API publicly or use its SQLite/file storage as a cloud datastore. Private deployment still needs authenticated access, managed PostgreSQL, private object storage, and a recovery-capable worker/queue before real staging can meet the product milestone.
 
 ---
 
@@ -94,6 +94,7 @@ This is an initial local persistence slice. It does not yet save generated image
 | GET | `/presets` | All sampler/resolution/LoRA presets |
 | POST | `/projects` | Create a local development project |
 | GET | `/projects/{project_id}` | Project and recorded generation provenance |
+| GET | `/projects/{project_id}/assets/{asset_id}` | Retrieve a locally persisted project image |
 | POST | `/generate` | Single image generation (async, 202) |
 | POST | `/batch-generate` | Batch generation |
 | GET | `/queue/status` | ComfyUI queue state |

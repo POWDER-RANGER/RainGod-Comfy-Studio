@@ -12,6 +12,7 @@ from tests.test_jobs_api import PROMPT_ID, _completed_history
 
 def _use_test_store(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("RAINGOD_DB_PATH", str(tmp_path / "projects.sqlite3"))
+    monkeypatch.setenv("RAINGOD_ASSET_DIR", str(tmp_path / "assets"))
 
 
 def test_create_and_read_project_persists_across_requests(
@@ -73,6 +74,41 @@ def test_project_generation_records_job_approval_and_provenance(
     assert job["approval"]["decision"] == "approved"
     assert job["provenance"]["seed"] == 8675309
     assert job["provenance"]["workflow"] == "txt2img"
+
+
+def test_project_image_is_saved_and_readable_without_comfyui_history(
+    client: TestClient, monkeypatch, tmp_path: Path
+) -> None:
+    _use_test_store(monkeypatch, tmp_path)
+    project = client.post("/projects", json={"name": "Cover"}).json()
+    fake = MagicMock()
+    fake.queue_prompt.return_value = "provider-prompt-asset"
+    fake.get_history.return_value = _completed_history()
+    fake.get_image_bytes.return_value = b"persisted-image-bytes"
+    monkeypatch.setattr("backend.rain_backend.client", fake)
+    generated = client.post(
+        "/generate",
+        json={"prompt": "rainy city", "project_id": project["id"], "approved": True},
+    )
+    assert generated.status_code == 202
+
+    fetched = client.get("/jobs/provider-prompt-asset/images/0")
+    assert fetched.status_code == 200
+    assert fetched.content == b"persisted-image-bytes"
+    asset_id = fetched.headers["x-raingod-asset-id"]
+
+    project_state = client.get(f"/projects/{project['id']}").json()
+    assert len(project_state["assets"]) == 1
+    asset = project_state["assets"][0]
+    assert asset["id"] == asset_id
+    assert asset["size_bytes"] == len(b"persisted-image-bytes")
+    assert asset["mime_type"] == "image/png"
+    assert asset["url"] == f"/projects/{project['id']}/assets/{asset_id}"
+
+    fake.get_history.return_value = {}
+    reloaded = client.get(asset["url"])
+    assert reloaded.status_code == 200
+    assert reloaded.content == b"persisted-image-bytes"
 
 
 def test_project_generation_failure_is_retained_as_failed_record(
