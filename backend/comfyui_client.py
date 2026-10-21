@@ -292,6 +292,10 @@ class ComfyUIClient:
         resp = self._request("GET", f"{self._cfg.base_url}/object_info")
         return resp.json()  # type: ignore[no-any-return]
 
+    def close(self) -> None:
+        """Close the pooled HTTP session and release its connections."""
+        self._session.close()
+
     def clear_dedup_cache(self) -> None:
         """Clear the in-memory deduplication cache."""
         self._dedup_cache.clear()
