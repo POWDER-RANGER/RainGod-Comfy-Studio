@@ -54,6 +54,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _single_line_log_value(value: object) -> str:
+    """Escape line breaks before including untrusted values in log records."""
+    return str(value).replace("\r", r"\r").replace("\n", r"\n")
+
 # ---------------------------------------------------------------------------
 # CORS — driven by ALLOWED_ORIGINS environment variable
 #
@@ -345,7 +350,7 @@ async def generate(
     logger.info(
         "Generation queued job_id=%s prompt_id=%s preset=%s resolution=%s",
         job_id,
-        prompt_id,
+        _single_line_log_value(prompt_id),
         req.preset,
         req.resolution,
     )
@@ -499,8 +504,12 @@ async def get_output(
     path = OUTPUT_DIR / filename
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {filename}")
-    # Prevent path traversal
+    # Compare path components instead of string prefixes. A prefix check would
+    # incorrectly allow sibling paths such as ``outputs-private/secret.png``.
+    output_root = OUTPUT_DIR.resolve()
     resolved = path.resolve()
-    if not str(resolved).startswith(str(OUTPUT_DIR.resolve())):
+    try:
+        resolved.relative_to(output_root)
+    except ValueError:
         raise HTTPException(status_code=403, detail="Forbidden")
     return FileResponse(resolved)
