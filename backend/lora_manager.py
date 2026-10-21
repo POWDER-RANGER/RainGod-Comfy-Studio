@@ -354,7 +354,7 @@ class LoRAManager:
         return name in self._registry
 
     def __repr__(self) -> str:
-        return f"LoRAManager(lora_dir={self._lora_dir!r}, " f"registered={len(self._registry)})"
+        return f"LoRAManager(lora_dir={self._lora_dir!r}, registered={len(self._registry)})"
 
 
 # ---------------------------------------------------------------------------
