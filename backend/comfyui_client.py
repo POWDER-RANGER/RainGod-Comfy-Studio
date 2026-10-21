@@ -189,14 +189,16 @@ class ComfyUIClient:
     def queue_prompt(
         self,
         workflow: dict[str, Any],
-        deduplicate: bool = True,
+        deduplicate: bool = False,
     ) -> str:
         """Submit a workflow to ComfyUI and return the prompt_id.
 
         Args:
             workflow: A valid ComfyUI workflow graph (node dict).
-            deduplicate: If True and an identical workflow was recently
-                submitted, return the cached prompt_id immediately.
+            deduplicate: If True, reuse the prompt_id for an identical workflow
+                already submitted by this client. This is opt-in because
+                identical workflows can represent intentional new generations.
+                The cache is process-local and is not a completion-aware job store.
 
         Returns:
             The prompt_id string assigned by ComfyUI.
