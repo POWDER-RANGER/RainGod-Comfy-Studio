@@ -15,13 +15,17 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+from .dispatch_routes import router as dispatch_router
 
 # ── Logging setup ──────────────────────────────────────────────────
 logging.basicConfig(
@@ -41,11 +45,12 @@ ALLOWED_ORIGINS: list[str] = (
 
 # ── Lifespan ───────────────────────────────────────────────────────
 @asynccontextmanager
-async def lifespan(application: FastAPI):
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     """Startup: warm the dispatcher (validates env, lazy-loads adapters).
     Adapters only import if their env key is set — safe to start with 0 keys.
     """
     from .dispatcher import RainGodDispatcher
+
     application.state.dispatcher = RainGodDispatcher()
     application.state.dispatcher._init_adapters()
 
@@ -58,8 +63,8 @@ async def lifespan(application: FastAPI):
 
 # ── App ────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="RainGod Comfy Studio",
-    description="Node-based AI creative pipeline — local Ollama + free cloud GPU fleet",
+    title="Rain God's Sad Boy Pipeline",
+    description="Artist-controlled creative pipeline with ComfyUI and configured providers",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -77,12 +82,12 @@ app.add_middleware(
 # ── Routers ────────────────────────────────────────────────────────
 
 # 1. Dispatch router — /dispatch and /dispatch/status
-from .dispatch_routes import router as dispatch_router
 app.include_router(dispatch_router)
 
 # 2. Original RAINGOD ComfyUI backend — /generate, /batch-generate, /health, etc.
 try:
     from .rain_backend import app as _rain_app
+
     for route in _rain_app.routes:
         app.routes.append(route)
     logger.info("RAINGOD ComfyUI routes mounted")
@@ -101,10 +106,11 @@ if _SWITCHBOARD.exists():
         """Serve the node-graph studio at the root URL."""
         return FileResponse(_SWITCHBOARD / "index.html")
 else:
+
     @app.get("/", include_in_schema=False)
-    async def root_no_ui() -> dict:
+    async def root_no_ui() -> dict[str, str]:
         return {
-            "name": "RainGod Comfy Studio API",
+            "name": "Rain God's Sad Boy Pipeline API",
             "version": "1.0.0",
             "docs": "/api/docs",
             "dispatch": "/dispatch",
@@ -114,7 +120,7 @@ else:
 
 # ── Unified health ─────────────────────────────────────────────────
 @app.get("/health", tags=["meta"])
-async def health() -> dict:
+async def health() -> dict[str, Any]:
     """Lightweight health check — does NOT hit ComfyUI or cloud services."""
     try:
         status = app.state.dispatcher.status()

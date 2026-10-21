@@ -25,7 +25,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .rain_backend_config import ComfyUIConfig, config as global_config
+from .rain_backend_config import ComfyUIConfig
+from .rain_backend_config import config as global_config
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +35,11 @@ logger = logging.getLogger(__name__)
 # Circuit Breaker
 # ---------------------------------------------------------------------------
 
+
 class CircuitState(str, Enum):
-    CLOSED = "closed"       # normal operation
-    OPEN = "open"           # failing; reject calls immediately
-    HALF_OPEN = "half_open" # probing to see if service recovered
+    CLOSED = "closed"  # normal operation
+    OPEN = "open"  # failing; reject calls immediately
+    HALF_OPEN = "half_open"  # probing to see if service recovered
 
 
 @dataclass
@@ -79,6 +81,7 @@ class CircuitBreaker:
 # Session Factory (urllib3 retry on transport-level errors only)
 # ---------------------------------------------------------------------------
 
+
 def _make_session(max_retries: int = 0) -> requests.Session:
     """Return a requests.Session with a single pooled adapter."""
     session = requests.Session()
@@ -98,6 +101,7 @@ def _make_session(max_retries: int = 0) -> requests.Session:
 # ---------------------------------------------------------------------------
 # ComfyUI Client
 # ---------------------------------------------------------------------------
+
 
 class ComfyUIClient:
     """Stateless ComfyUI API client.
@@ -139,9 +143,7 @@ class ComfyUIClient:
     ) -> requests.Response:
         """Execute an HTTP request with circuit breaker + exponential backoff."""
         if self._cb.is_open():
-            raise RuntimeError(
-                "ComfyUI circuit breaker is OPEN — upstream is unavailable"
-            )
+            raise RuntimeError("ComfyUI circuit breaker is OPEN — upstream is unavailable")
 
         last_exc: Exception = RuntimeError("No attempts made")
         for attempt in range(self._max_retries + 1):
@@ -159,7 +161,7 @@ class ComfyUIClient:
                 last_exc = exc
                 self._cb.record_failure()
                 if attempt < self._max_retries:
-                    delay = self._retry_delay_base ** attempt
+                    delay = self._retry_delay_base**attempt
                     logger.warning(
                         "ComfyUI request failed (attempt %d/%d), retrying in %.1fs: %s",
                         attempt + 1,
@@ -189,14 +191,16 @@ class ComfyUIClient:
     def queue_prompt(
         self,
         workflow: dict[str, Any],
-        deduplicate: bool = True,
+        deduplicate: bool = False,
     ) -> str:
         """Submit a workflow to ComfyUI and return the prompt_id.
 
         Args:
             workflow: A valid ComfyUI workflow graph (node dict).
-            deduplicate: If True and an identical workflow was recently
-                submitted, return the cached prompt_id immediately.
+            deduplicate: If True, reuse the prompt_id for an identical workflow
+                already submitted by this client. This is opt-in because
+                identical workflows can represent intentional new generations.
+                The cache is process-local and is not a completion-aware job store.
 
         Returns:
             The prompt_id string assigned by ComfyUI.
@@ -224,8 +228,13 @@ class ComfyUIClient:
         """Return the full history entry for a completed prompt."""
         url = f"{self._cfg.history_url}/{prompt_id}"
         resp = self._request("GET", url)
-        data: dict[str, Any] = resp.json()
-        return data.get(prompt_id, {})
+        data = resp.json()
+        if not isinstance(data, dict):
+            return {}
+        history = data.get(prompt_id, {})
+        if not isinstance(history, dict):
+            return {}
+        return {str(key): value for key, value in history.items()}
 
     def wait_for_completion(
         self,
@@ -242,9 +251,7 @@ class ComfyUIClient:
                 return history
             time.sleep(poll_interval)
 
-        raise TimeoutError(
-            f"prompt_id={prompt_id} did not complete within {timeout:.0f}s"
-        )
+        raise TimeoutError(f"prompt_id={prompt_id} did not complete within {timeout:.0f}s")
 
     def get_queue_status(self) -> dict[str, Any]:
         """Return current queue state from ComfyUI."""
@@ -266,7 +273,9 @@ class ComfyUIClient:
         except requests.exceptions.RequestException:
             return False
 
-    def get_image_bytes(self, filename: str, subfolder: str = "", image_type: str = "output") -> bytes:
+    def get_image_bytes(
+        self, filename: str, subfolder: str = "", image_type: str = "output"
+    ) -> bytes:
         """Download a generated image from ComfyUI's /view endpoint."""
         params = {"filename": filename, "type": image_type}
         if subfolder:

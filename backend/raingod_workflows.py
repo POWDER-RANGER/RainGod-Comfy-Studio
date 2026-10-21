@@ -4,6 +4,8 @@ Pre-built SDXL/Flux workflows tuned for his lo-fi anime, nostalgic aesthetic.
 Load these directly from the UI or via the dispatcher.
 """
 
+from typing import Any
+
 RAINGOD_SDXL_PRESET = {
     "name": "Rain God - SDXL Lo-Fi Anime",
     "description": "SDXL optimized for rain god's aesthetic: lo-fi anime, late-night, moody, retro nostalgia",
@@ -60,28 +62,32 @@ RAINGOD_ANIMATEDIFF_PRESET = {
     },
 }
 
-PRESETS = {
+PRESETS: dict[str, dict[str, Any]] = {
     "sdxl_lofi": RAINGOD_SDXL_PRESET,
     "flux_ultra": RAINGOD_FLUX_PRESET,
     "animatediff_vhs": RAINGOD_ANIMATEDIFF_PRESET,
 }
 
 
-def get_preset(preset_name: str) -> dict:
+def get_preset(preset_name: str) -> dict[str, Any]:
     """Fetch a pre-built workflow preset by name."""
     if preset_name not in PRESETS:
-        raise ValueError(f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())}")
+        raise ValueError(
+            f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())}"
+        )
     return PRESETS[preset_name]
 
 
-def list_presets() -> list:
+def list_presets() -> list[dict[str, str]]:
     """Return all available preset names and descriptions."""
     return [{"name": k, "desc": v["description"]} for k, v in PRESETS.items()]
 
 
-def merge_preset_with_payload(preset_name: str, user_payload: dict) -> dict:
+def merge_preset_with_payload(
+    preset_name: str, user_payload: dict[str, Any]
+) -> dict[str, Any]:
     """Merge a preset with user overrides — user values take precedence."""
     preset = get_preset(preset_name)
-    merged = preset["params"].copy()
+    merged: dict[str, Any] = dict(preset["params"])
     merged.update(user_payload)
     return merged
