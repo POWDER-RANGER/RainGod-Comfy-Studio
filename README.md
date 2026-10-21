@@ -78,6 +78,12 @@ uvicorn backend.rain_backend:app --host 0.0.0.0 --port 8000
 
 Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` in your browser for the dashboard.
 
+### Local project records (development only)
+
+`POST /projects` creates a project and `GET /projects/{project_id}` returns its metadata and recorded generation jobs. To attach a ComfyUI request to a project, include its `project_id` and `"approved": true` in `POST /generate`. The local SQLite database defaults to `.raingod/raingod.sqlite3`; set `RAINGOD_DB_PATH` to choose another location. Jobs retain their prompt/settings, approval decision, seed/workflow settings, provider run ID, and submission state across API restarts.
+
+This is an initial local persistence slice. It does not yet save generated image bytes as project assets, reconcile job state after a restart, provide authentication or per-user access control, or support shared/multi-instance operation. Do not expose this API publicly or use the SQLite file as a cloud datastore. Private deployment still needs authenticated access, managed PostgreSQL, private object storage, and a recovery-capable worker/queue before real staging can meet the product milestone.
+
 ---
 
 ## Backend API
@@ -86,6 +92,8 @@ Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` i
 |--------|----------|-------------|
 | GET | `/health` | Backend + ComfyUI status |
 | GET | `/presets` | All sampler/resolution/LoRA presets |
+| POST | `/projects` | Create a local development project |
+| GET | `/projects/{project_id}` | Project and recorded generation provenance |
 | POST | `/generate` | Single image generation (async, 202) |
 | POST | `/batch-generate` | Batch generation |
 | GET | `/queue/status` | ComfyUI queue state |

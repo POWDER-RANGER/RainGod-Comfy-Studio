@@ -130,6 +130,7 @@ docker-compose.override.yml
 # ============================================================
 # Git LFS candidates
 # ============================================================
+.raingod/
 # DEVIANT2026_small.gif is 12 MB — migrate with:
 #   git lfs track "*.gif"
 #   git add .gitattributes
