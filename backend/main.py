@@ -62,6 +62,7 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         try:
             yield
         finally:
+            await application.state.dispatcher.close()
             logger.info("RainGod Studio shutting down")
 
 
