@@ -97,8 +97,8 @@ async def lifespan(application: FastAPI):  # noqa: ARG001
 # Application
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="RAINGOD Visual Generation API",
-    description="ComfyUI integration for the RAINGOD AI Music Kit",
+    title="Rain God’s Sad Boy Pipeline API",
+    description="Artist-controlled creative generation API for Rain God’s Sad Boy Pipeline",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -231,7 +231,7 @@ def _queue_contains(items: Any, prompt_id: str) -> bool:
 @app.get("/", summary="Root")
 async def root() -> dict[str, str]:
     return {
-        "name": "RAINGOD Visual Generation API",
+        "name": "Rain God’s Sad Boy Pipeline API",
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/health",
