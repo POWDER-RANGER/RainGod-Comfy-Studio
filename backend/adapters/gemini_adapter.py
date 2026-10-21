@@ -20,12 +20,12 @@ class GeminiAdapter:
         self._client = httpx.AsyncClient(timeout=60.0)
         self._model = "gemini-2.0-flash"
 
-    async def generate(self, prompt: str, **kwargs) -> str:
+    async def generate(self, prompt: str, **kwargs: Any) -> str:
         url = f"{_GEMINI_BASE}/models/{self._model}:generateContent?key={self._key}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         resp = await self._client.post(url, json=payload)
         resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return cast(str, resp.json()["candidates"][0]["content"]["parts"][0]["text"])
 
     async def vision(
         self,
@@ -44,7 +44,7 @@ class GeminiAdapter:
         url = f"{_GEMINI_BASE}/models/{self._model}:generateContent?key={self._key}"
         resp = await self._client.post(url, json={"contents": [{"parts": parts}]})
         resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        return cast(str, resp.json()["candidates"][0]["content"]["parts"][0]["text"])
 
     async def close(self) -> None:
         await self._client.aclose()

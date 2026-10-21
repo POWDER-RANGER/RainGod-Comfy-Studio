@@ -81,6 +81,17 @@ def test_job_image_is_retrieved_from_comfyui(client: TestClient, monkeypatch) ->
     )
 
 
+def test_job_image_rejects_non_image_history_output(client: TestClient, monkeypatch) -> None:
+    history = _completed_history()
+    history["outputs"]["7"]["images"][0]["filename"] = "unexpected.txt"
+    fake = _install_client(monkeypatch, history=history)
+
+    response = client.get(f"/jobs/{PROMPT_ID}/images/0")
+
+    assert response.status_code == 415
+    fake.get_image_bytes.assert_not_called()
+
+
 def test_unknown_job_is_not_reported_as_success(client: TestClient, monkeypatch) -> None:
     _install_client(monkeypatch)
 
