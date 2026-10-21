@@ -19,6 +19,7 @@ GET  /outputs/{filename} Retrieve a generated image file
 from __future__ import annotations
 
 import logging
+import mimetypes
 import os
 import time
 import uuid
@@ -28,8 +29,9 @@ from typing import Annotated, Any
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Path as FPath
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
+from requests.exceptions import RequestException
 
 from .comfyui_client import ComfyUIClient
 from .rain_backend_config import (
@@ -166,6 +168,60 @@ _workflow_builder = WorkflowBuilder()
 # Application startup time (for uptime reporting)
 # ---------------------------------------------------------------------------
 _START_TIME = time.monotonic()
+
+
+def _read_prompt_history(cl: ComfyUIClient, prompt_id: str) -> dict[str, Any]:
+    """Read ComfyUI history and map upstream failures to an API error."""
+    try:
+        return cl.get_history(prompt_id)
+    except (RequestException, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="ComfyUI history is currently unavailable",
+        ) from exc
+
+
+def _history_images(history: dict[str, Any]) -> list[dict[str, str]]:
+    """Extract safe image descriptors from a ComfyUI history record."""
+    outputs = history.get("outputs", {})
+    if not isinstance(outputs, dict):
+        return []
+
+    images: list[dict[str, str]] = []
+    for node_output in outputs.values():
+        if not isinstance(node_output, dict):
+            continue
+        node_images = node_output.get("images", [])
+        if not isinstance(node_images, list):
+            continue
+        for item in node_images:
+            if not isinstance(item, dict):
+                continue
+            filename = item.get("filename")
+            if not isinstance(filename, str) or not filename:
+                continue
+            image_type = item.get("type", "output")
+            if image_type not in {"output", "temp", "input"}:
+                continue
+            subfolder = item.get("subfolder", "")
+            images.append({
+                "filename": filename,
+                "subfolder": subfolder if isinstance(subfolder, str) else "",
+                "type": image_type,
+            })
+    return images
+
+
+def _queue_contains(items: Any, prompt_id: str) -> bool:
+    """Recognize prompt IDs in ComfyUI's standard queue tuple or object forms."""
+    if not isinstance(items, list):
+        return False
+    for item in items:
+        if isinstance(item, dict) and item.get("prompt_id") == prompt_id:
+            return True
+        if isinstance(item, (list, tuple)) and len(item) > 1 and item[1] == prompt_id:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +396,88 @@ async def cancel_queue_item(
     cl = _get_client()
     cancelled = cl.cancel_prompt(prompt_id)
     return {"prompt_id": prompt_id, "cancelled": cancelled}
+
+
+@app.get("/jobs/{prompt_id}", summary="Inspect a ComfyUI generation job")
+async def get_job_status(
+    prompt_id: Annotated[str, FPath(min_length=1, max_length=128)],
+) -> dict[str, Any]:
+    """Return real queue/history status and available images for a submitted prompt."""
+    cl = _get_client()
+    history = _read_prompt_history(cl, prompt_id)
+
+    if history:
+        upstream_status = history.get("status", {})
+        if not isinstance(upstream_status, dict):
+            upstream_status = {}
+        if upstream_status.get("status_str") == "error":
+            status = "error"
+        elif upstream_status.get("completed"):
+            status = "completed"
+        else:
+            status = str(upstream_status.get("status_str") or "running")
+        image_items = _history_images(history)
+        return {
+            "prompt_id": prompt_id,
+            "status": status,
+            "completed": bool(upstream_status.get("completed")),
+            "images": [
+                {"index": index, "url": f"/jobs/{prompt_id}/images/{index}"}
+                for index in range(len(image_items))
+            ],
+        }
+
+    try:
+        queue = cl.get_queue_status()
+    except (RequestException, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="ComfyUI queue status is currently unavailable",
+        ) from exc
+
+    if _queue_contains(queue.get("queue_running", []), prompt_id):
+        status = "running"
+    elif _queue_contains(queue.get("queue_pending", []), prompt_id):
+        status = "queued"
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Prompt was not found in ComfyUI history or queue",
+        )
+
+    return {"prompt_id": prompt_id, "status": status, "completed": False, "images": []}
+
+
+@app.get("/jobs/{prompt_id}/images/{image_index}", summary="Retrieve a generated ComfyUI image")
+async def get_job_image(
+    prompt_id: Annotated[str, FPath(min_length=1, max_length=128)],
+    image_index: Annotated[int, FPath(ge=0, le=99)],
+) -> Response:
+    """Proxy a real image referenced by ComfyUI history; never invent a file path."""
+    cl = _get_client()
+    history = _read_prompt_history(cl, prompt_id)
+    image_items = _history_images(history)
+    if image_index >= len(image_items):
+        raise HTTPException(status_code=404, detail="Image not found for this prompt")
+
+    image = image_items[image_index]
+    media_type = mimetypes.guess_type(image["filename"])[0] or "application/octet-stream"
+    if not media_type.startswith("image/"):
+        raise HTTPException(status_code=415, detail="ComfyUI output is not a supported image")
+
+    try:
+        content = cl.get_image_bytes(
+            image["filename"],
+            subfolder=image["subfolder"],
+            image_type=image["type"],
+        )
+    except (RequestException, RuntimeError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to retrieve the generated image from ComfyUI",
+        ) from exc
+
+    return Response(content=content, media_type=media_type, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/outputs/{filename}", summary="Retrieve generated image")
