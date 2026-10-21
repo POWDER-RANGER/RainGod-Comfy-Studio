@@ -7,11 +7,11 @@ uvicorn[standard]==0.54.0
 # HTTP clients / transport
 requests==2.34.2
 httpx==0.28.1
-websockets==12.0
+websockets==16.0
 
 # Validation and async utilities
 pydantic==2.14.1
-pydantic-settings==2.16.0
+pydantic-settings==2.15.0
 anyio==4.15.1
 aiofiles==23.2.1
 
