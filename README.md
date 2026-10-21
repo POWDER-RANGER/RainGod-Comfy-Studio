@@ -166,6 +166,8 @@ Services: ComfyUI (:8188) + RAINGOD backend (:8000) + Redis + Nginx reverse prox
 ## Documentation
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Full system architecture
+
+- [`docs/REPOSITORY_STRATEGY.md`](docs/REPOSITORY_STRATEGY.md) — canonical master repository and consolidation rules
 - [`INSTALLATION.md`](INSTALLATION.md) — Setup guide
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Contribution guidelines
 - [`CONTACT.md`](CONTACT.md) — Contact & support
