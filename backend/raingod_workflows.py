@@ -93,7 +93,7 @@ PRESETS: dict[str, dict[str, Any]] = {
 def get_preset(preset_name: str) -> dict[str, Any]:
     """Fetch a pre-built workflow preset by name."""
     if preset_name not in PRESETS:
-        raise ValueError(f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())})
+        raise ValueError(f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())}")
     return PRESETS[preset_name]
 
 
