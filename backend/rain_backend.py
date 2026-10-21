@@ -91,8 +91,14 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         rain_config.comfyui.base_url,
         rain_config.gpu_tier.value,
     )
-    yield
-    logger.info("RAINGOD backend shutting down")
+    try:
+        yield
+    finally:
+        active_client = client
+        client = None
+        if active_client is not None:
+            active_client.close()
+        logger.info("RAINGOD backend shutting down")
 
 
 # ---------------------------------------------------------------------------
