@@ -93,9 +93,7 @@ PRESETS: dict[str, dict[str, Any]] = {
 def get_preset(preset_name: str) -> dict[str, Any]:
     """Fetch a pre-built workflow preset by name."""
     if preset_name not in PRESETS:
-        raise ValueError(
-            f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())}"
-        )
+        raise ValueError(f"Unknown preset: {preset_name}. Available: {list(PRESETS.keys())})
     return PRESETS[preset_name]
 
 
@@ -104,9 +102,7 @@ def list_presets() -> list[dict[str, str]]:
     return [{"name": k, "desc": v["description"]} for k, v in PRESETS.items()]
 
 
-def merge_preset_with_payload(
-    preset_name: str, user_payload: dict[str, Any]
-) -> dict[str, Any]:
+def merge_preset_with_payload(preset_name: str, user_payload: dict[str, Any]) -> dict[str, Any]:
     """Merge a preset with user overrides — user values take precedence."""
     preset = get_preset(preset_name)
     merged: dict[str, Any] = dict(preset["params"])
