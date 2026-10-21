@@ -50,15 +50,20 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     Adapters only import if their env key is set — safe to start with 0 keys.
     """
     from .dispatcher import RainGodDispatcher
+    from .rain_backend import app as rain_app
 
     application.state.dispatcher = RainGodDispatcher()
     application.state.dispatcher._init_adapters()
 
-    status = application.state.dispatcher.status()
-    active = [k for k, v in status.items() if v]
-    logger.info("RainGod Studio started — active adapters: %s", active)
-    yield
-    logger.info("RainGod Studio shutting down")
+    async with rain_app.router.lifespan_context(rain_app):
+        status = application.state.dispatcher.status()
+        active = [k for k, v in status.items() if v]
+        logger.info("RainGod Studio started — active adapters: %s", active)
+        try:
+            yield
+        finally:
+            await application.state.dispatcher.close()
+            logger.info("RainGod Studio shutting down")
 
 
 # ── App ────────────────────────────────────────────────────────────
@@ -89,6 +94,9 @@ try:
     from .rain_backend import app as _rain_app
 
     for route in _rain_app.routes:
+        # The main application owns the UI root, unified health, and OpenAPI schema.
+        if getattr(route, "path", None) in {"/", "/health", "/openapi.json"}:
+            continue
         app.routes.append(route)
     logger.info("RAINGOD ComfyUI routes mounted")
 except Exception as e:
