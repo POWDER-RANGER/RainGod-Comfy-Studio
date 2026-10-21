@@ -34,10 +34,11 @@ logger = logging.getLogger(__name__)
 # Circuit Breaker
 # ---------------------------------------------------------------------------
 
+
 class CircuitState(str, Enum):
-    CLOSED = "closed"       # normal operation
-    OPEN = "open"           # failing; reject calls immediately
-    HALF_OPEN = "half_open" # probing to see if service recovered
+    CLOSED = "closed"  # normal operation
+    OPEN = "open"  # failing; reject calls immediately
+    HALF_OPEN = "half_open"  # probing to see if service recovered
 
 
 @dataclass
@@ -79,6 +80,7 @@ class CircuitBreaker:
 # Session Factory (urllib3 retry on transport-level errors only)
 # ---------------------------------------------------------------------------
 
+
 def _make_session(max_retries: int = 0) -> requests.Session:
     """Return a requests.Session with a single pooled adapter."""
     session = requests.Session()
@@ -98,6 +100,7 @@ def _make_session(max_retries: int = 0) -> requests.Session:
 # ---------------------------------------------------------------------------
 # ComfyUI Client
 # ---------------------------------------------------------------------------
+
 
 class ComfyUIClient:
     """Stateless ComfyUI API client.
@@ -139,9 +142,7 @@ class ComfyUIClient:
     ) -> requests.Response:
         """Execute an HTTP request with circuit breaker + exponential backoff."""
         if self._cb.is_open():
-            raise RuntimeError(
-                "ComfyUI circuit breaker is OPEN — upstream is unavailable"
-            )
+            raise RuntimeError("ComfyUI circuit breaker is OPEN — upstream is unavailable")
 
         last_exc: Exception = RuntimeError("No attempts made")
         for attempt in range(self._max_retries + 1):
@@ -159,7 +160,7 @@ class ComfyUIClient:
                 last_exc = exc
                 self._cb.record_failure()
                 if attempt < self._max_retries:
-                    delay = self._retry_delay_base ** attempt
+                    delay = self._retry_delay_base**attempt
                     logger.warning(
                         "ComfyUI request failed (attempt %d/%d), retrying in %.1fs: %s",
                         attempt + 1,
@@ -244,9 +245,7 @@ class ComfyUIClient:
                 return history
             time.sleep(poll_interval)
 
-        raise TimeoutError(
-            f"prompt_id={prompt_id} did not complete within {timeout:.0f}s"
-        )
+        raise TimeoutError(f"prompt_id={prompt_id} did not complete within {timeout:.0f}s")
 
     def get_queue_status(self) -> dict[str, Any]:
         """Return current queue state from ComfyUI."""
@@ -268,7 +267,9 @@ class ComfyUIClient:
         except requests.exceptions.RequestException:
             return False
 
-    def get_image_bytes(self, filename: str, subfolder: str = "", image_type: str = "output") -> bytes:
+    def get_image_bytes(
+        self, filename: str, subfolder: str = "", image_type: str = "output"
+    ) -> bytes:
         """Download a generated image from ComfyUI's /view endpoint."""
         params = {"filename": filename, "type": image_type}
         if subfolder:

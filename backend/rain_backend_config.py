@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Enumerations
 # ---------------------------------------------------------------------------
 
+
 class QualityTier(str, Enum):
     DRAFT = "draft"
     STANDARD = "standard"
@@ -29,8 +30,8 @@ class QualityTier(str, Enum):
 
 class GPUTier(str, Enum):
     CPU_ONLY = "cpu"
-    LOW_VRAM = "low_vram"    # < 8 GB
-    MID_VRAM = "mid_vram"    # 8–16 GB
+    LOW_VRAM = "low_vram"  # < 8 GB
+    MID_VRAM = "mid_vram"  # 8–16 GB
     HIGH_VRAM = "high_vram"  # > 16 GB
 
 
@@ -39,12 +40,12 @@ class GPUTier(str, Enum):
 # ---------------------------------------------------------------------------
 
 RESOLUTION_PRESETS: dict[str, dict[str, int]] = {
-    "thumbnail":      {"width": 512,  "height": 512},
-    "cover_art":      {"width": 1024, "height": 1024},
-    "banner":         {"width": 1920, "height": 1080},
-    "video_frame":    {"width": 1920, "height": 1080},
-    "high_res":       {"width": 2048, "height": 2048},
-    "4k":             {"width": 3840, "height": 2160},
+    "thumbnail": {"width": 512, "height": 512},
+    "cover_art": {"width": 1024, "height": 1024},
+    "banner": {"width": 1920, "height": 1080},
+    "video_frame": {"width": 1920, "height": 1080},
+    "high_res": {"width": 2048, "height": 2048},
+    "4k": {"width": 3840, "height": 2160},
     "vertical_video": {"width": 1080, "height": 1920},
 }
 
@@ -52,6 +53,7 @@ RESOLUTION_PRESETS: dict[str, dict[str, int]] = {
 # ---------------------------------------------------------------------------
 # Sampler Presets
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SamplerPreset:
@@ -106,6 +108,7 @@ SAMPLER_PRESETS: dict[str, SamplerPreset] = {
 # LoRA Mappings
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class LoRAConfig:
     filename: str
@@ -115,13 +118,19 @@ class LoRAConfig:
 
 
 LORA_MAPPINGS: dict[str, LoRAConfig] = {
-    "raingod_style":  LoRAConfig("raingod_v1.safetensors",  description="RAINGOD house aesthetic"),
-    "album_cover":    LoRAConfig("album_aesthetic_v2.safetensors", description="Professional album cover composition"),
-    "video_aesthetic":LoRAConfig("cinematic_v3.safetensors", description="Cinematic colour grading"),
-    "synthwave":      LoRAConfig("synthwave_v2.safetensors", description="1980s synthwave / retrowave style"),
-    "cyberpunk":      LoRAConfig("cyberpunk_v1.safetensors", description="Neon cyberpunk cityscape"),
-    "abstract":       LoRAConfig("abstract_art_v1.safetensors", description="Geometric abstract art"),
-    "dark_moody":     LoRAConfig("dark_aesthetic_v1.safetensors", description="Dark atmospheric mood"),
+    "raingod_style": LoRAConfig("raingod_v1.safetensors", description="RAINGOD house aesthetic"),
+    "album_cover": LoRAConfig(
+        "album_aesthetic_v2.safetensors", description="Professional album cover composition"
+    ),
+    "video_aesthetic": LoRAConfig(
+        "cinematic_v3.safetensors", description="Cinematic colour grading"
+    ),
+    "synthwave": LoRAConfig(
+        "synthwave_v2.safetensors", description="1980s synthwave / retrowave style"
+    ),
+    "cyberpunk": LoRAConfig("cyberpunk_v1.safetensors", description="Neon cyberpunk cityscape"),
+    "abstract": LoRAConfig("abstract_art_v1.safetensors", description="Geometric abstract art"),
+    "dark_moody": LoRAConfig("dark_aesthetic_v1.safetensors", description="Dark atmospheric mood"),
 }
 
 
@@ -154,6 +163,7 @@ QUALITY_TIERS: dict[QualityTier, dict[str, Any]] = {
 # ---------------------------------------------------------------------------
 # GPU Hardware Detection
 # ---------------------------------------------------------------------------
+
 
 def detect_gpu_tier() -> GPUTier:
     """Detect GPU capability and return appropriate tier.
@@ -188,6 +198,7 @@ def detect_gpu_tier() -> GPUTier:
 # Batch Processing Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BatchConfig:
     max_concurrent: int = 4
@@ -200,6 +211,7 @@ class BatchConfig:
 # ---------------------------------------------------------------------------
 # Audio-Visual Sync Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AudioVisualSyncConfig:
@@ -215,6 +227,7 @@ class AudioVisualSyncConfig:
 # Cache Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CacheConfig:
     enabled: bool = True
@@ -226,6 +239,7 @@ class CacheConfig:
 # ---------------------------------------------------------------------------
 # Logging Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class LoggingConfig:
@@ -241,6 +255,7 @@ class LoggingConfig:
 # ---------------------------------------------------------------------------
 # ComfyUI API Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ComfyUIConfig:
@@ -274,6 +289,7 @@ class ComfyUIConfig:
 # Root Config Object
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RainGodConfig:
     """Top-level configuration object.
@@ -292,15 +308,9 @@ class RainGodConfig:
     resolution_presets: dict[str, dict[str, int]] = field(
         default_factory=lambda: RESOLUTION_PRESETS
     )
-    sampler_presets: dict[str, SamplerPreset] = field(
-        default_factory=lambda: SAMPLER_PRESETS
-    )
-    lora_mappings: dict[str, LoRAConfig] = field(
-        default_factory=lambda: LORA_MAPPINGS
-    )
-    quality_tiers: dict[QualityTier, dict[str, Any]] = field(
-        default_factory=lambda: QUALITY_TIERS
-    )
+    sampler_presets: dict[str, SamplerPreset] = field(default_factory=lambda: SAMPLER_PRESETS)
+    lora_mappings: dict[str, LoRAConfig] = field(default_factory=lambda: LORA_MAPPINGS)
+    quality_tiers: dict[QualityTier, dict[str, Any]] = field(default_factory=lambda: QUALITY_TIERS)
 
 
 # Module-level singleton — import this everywhere

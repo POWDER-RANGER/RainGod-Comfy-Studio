@@ -50,12 +50,12 @@ class SunoAdapter:
             clip = status_resp.json()
             if clip.get("status") == "complete":
                 return {
-                    "clip_id":   clip["id"],
-                    "title":     clip.get("title"),
+                    "clip_id": clip["id"],
+                    "title": clip.get("title"),
                     "audio_url": clip.get("audio_url"),
                     "image_url": clip.get("image_url"),
-                    "duration":  clip.get("duration"),
-                    "tags":      clip.get("tags"),
+                    "duration": clip.get("duration"),
+                    "tags": clip.get("tags"),
                 }
             logger.debug("Suno clip %s status: %s", clip_id, clip.get("status"))
         raise TimeoutError(f"Suno clip {clip_id} did not complete within {max_wait}s")

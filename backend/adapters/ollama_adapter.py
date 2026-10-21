@@ -53,19 +53,29 @@ class OllamaAdapter:
         resp.raise_for_status()
         return resp.json()["response"]
 
-    async def chat(self, messages: list[dict], model: str = "dolphin-llama3:8b", system: str | None = None) -> str:
-        payload: dict[str, Any] = {"model": model, "messages": messages, "stream": False, "options": _DEFAULT_OPTIONS}
+    async def chat(
+        self, messages: list[dict], model: str = "dolphin-llama3:8b", system: str | None = None
+    ) -> str:
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "options": _DEFAULT_OPTIONS,
+        }
         if system:
             payload["messages"] = [{"role": "system", "content": system}] + messages
         resp = await self._client.post(f"{self._base}/api/chat", json=payload)
         resp.raise_for_status()
         return resp.json()["message"]["content"]
 
-    async def vision(self, image_url: str, prompt: str = "Describe this image.", model: str = "moondream:1.8b") -> str:
+    async def vision(
+        self, image_url: str, prompt: str = "Describe this image.", model: str = "moondream:1.8b"
+    ) -> str:
         async with httpx.AsyncClient(timeout=30) as fc:
             img_resp = await fc.get(image_url)
             img_resp.raise_for_status()
         import base64
+
         img_b64 = base64.b64encode(img_resp.content).decode()
         payload = {"model": model, "prompt": prompt, "images": [img_b64], "stream": False}
         resp = await self._client.post(f"{self._base}/api/generate", json=payload)
@@ -73,7 +83,9 @@ class OllamaAdapter:
         return resp.json()["response"]
 
     async def embed(self, text: str, model: str = "nomic-embed-text") -> list[float]:
-        resp = await self._client.post(f"{self._base}/api/embed", json={"model": model, "input": text})
+        resp = await self._client.post(
+            f"{self._base}/api/embed", json={"model": model, "input": text}
+        )
         resp.raise_for_status()
         return resp.json().get("embeddings", [[]])[0]
 

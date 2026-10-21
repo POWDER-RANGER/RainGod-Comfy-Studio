@@ -35,17 +35,27 @@ class OpenRouterAdapter:
             timeout=90.0,
         )
 
-    async def generate(self, prompt: str, model: str = FREE_MODELS[0], system: str | None = None, temperature: float = 0.7, max_tokens: int = 2048) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        model: str = FREE_MODELS[0],
+        system: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> str:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        resp = await self._client.post("/chat/completions", json={
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        })
+        resp = await self._client.post(
+            "/chat/completions",
+            json={
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
 

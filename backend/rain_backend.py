@@ -124,6 +124,7 @@ def _get_client() -> ComfyUIClient:
 # Pydantic Models
 # ---------------------------------------------------------------------------
 
+
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=4096, description="Positive prompt")
     negative_prompt: str = Field(default="", description="Negative prompt")
@@ -204,11 +205,13 @@ def _history_images(history: dict[str, Any]) -> list[dict[str, str]]:
             if image_type not in {"output", "temp", "input"}:
                 continue
             subfolder = item.get("subfolder", "")
-            images.append({
-                "filename": filename,
-                "subfolder": subfolder if isinstance(subfolder, str) else "",
-                "type": image_type,
-            })
+            images.append(
+                {
+                    "filename": filename,
+                    "subfolder": subfolder if isinstance(subfolder, str) else "",
+                    "type": image_type,
+                }
+            )
     return images
 
 
@@ -227,6 +230,7 @@ def _queue_contains(items: Any, prompt_id: str) -> bool:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/", summary="Root")
 async def root() -> dict[str, str]:

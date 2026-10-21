@@ -46,6 +46,7 @@ async def lifespan(application: FastAPI):
     Adapters only import if their env key is set — safe to start with 0 keys.
     """
     from .dispatcher import RainGodDispatcher
+
     application.state.dispatcher = RainGodDispatcher()
     application.state.dispatcher._init_adapters()
 
@@ -78,11 +79,13 @@ app.add_middleware(
 
 # 1. Dispatch router — /dispatch and /dispatch/status
 from .dispatch_routes import router as dispatch_router
+
 app.include_router(dispatch_router)
 
 # 2. Original RAINGOD ComfyUI backend — /generate, /batch-generate, /health, etc.
 try:
     from .rain_backend import app as _rain_app
+
     for route in _rain_app.routes:
         app.routes.append(route)
     logger.info("RAINGOD ComfyUI routes mounted")
@@ -101,6 +104,7 @@ if _SWITCHBOARD.exists():
         """Serve the node-graph studio at the root URL."""
         return FileResponse(_SWITCHBOARD / "index.html")
 else:
+
     @app.get("/", include_in_schema=False)
     async def root_no_ui() -> dict:
         return {

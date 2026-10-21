@@ -219,7 +219,7 @@ class LoRAManager:
 
         base_node_id = 100
         prev_model_ref: list[Any] = ["1", 0]  # CheckpointLoaderSimple model output
-        prev_clip_ref: list[Any] = ["1", 1]   # CheckpointLoaderSimple clip output
+        prev_clip_ref: list[Any] = ["1", 1]  # CheckpointLoaderSimple clip output
 
         for idx, (name, strength_model, strength_clip) in enumerate(loras):
             cfg = self.load(name)
@@ -311,9 +311,7 @@ class LoRAManager:
 
         valid_modes = {"average", "max", "sum_clamp"}
         if blend_mode not in valid_modes:
-            raise ValueError(
-                f"Unknown blend_mode {blend_mode!r}. Choose from: {valid_modes}"
-            )
+            raise ValueError(f"Unknown blend_mode {blend_mode!r}. Choose from: {valid_modes}")
 
         model_strengths = [lo.strength_model for lo in loras]
         clip_strengths = [lo.strength_clip for lo in loras]
@@ -332,9 +330,7 @@ class LoRAManager:
             filename="+".join(lo.filename for lo in loras),
             strength_model=round(sm, 4),
             strength_clip=round(sc, 4),
-            description="Blended: " + ", ".join(
-                lo.description or lo.filename for lo in loras
-            ),
+            description="Blended: " + ", ".join(lo.description or lo.filename for lo in loras),
         )
 
     def summary(self) -> dict[str, Any]:
@@ -358,15 +354,13 @@ class LoRAManager:
         return name in self._registry
 
     def __repr__(self) -> str:
-        return (
-            f"LoRAManager(lora_dir={self._lora_dir!r}, "
-            f"registered={len(self._registry)})"
-        )
+        return f"LoRAManager(lora_dir={self._lora_dir!r}, " f"registered={len(self._registry)})"
 
 
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
 
 def _stem_to_slug(stem: str) -> str:
     """Convert a filename stem to a lowercase API-friendly slug.

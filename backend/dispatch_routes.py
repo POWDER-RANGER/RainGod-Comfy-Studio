@@ -22,7 +22,9 @@ async def dispatch(req: DispatchRequest):
     try:
         task = TaskType(req.task_type)
     except ValueError:
-        raise HTTPException(400, f"Unknown task_type: {req.task_type}. Valid: {[t.value for t in TaskType]}")
+        raise HTTPException(
+            400, f"Unknown task_type: {req.task_type}. Valid: {[t.value for t in TaskType]}"
+        )
     try:
         result = await _dispatcher.dispatch(task, req.payload, prefer_local=req.prefer_local)
         return {"source": result.source, "data": result.data, "metadata": result.metadata}
