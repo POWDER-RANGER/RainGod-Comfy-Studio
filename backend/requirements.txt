@@ -2,6 +2,8 @@
 
 # API framework
 fastapi==0.143.3
+# FastAPI permits Starlette 1.x, which requires Python 3.11; keep Python 3.10 support.
+starlette==0.49.1
 uvicorn[standard]==0.54.0
 
 # HTTP clients / transport
