@@ -16,6 +16,11 @@ RainGod Comfy Studio is the unified visual generation engine and workflow interf
 
 Built by **Curtis Charles Farrar** ([@POWDER-RANGER](https://github.com/POWDER-RANGER)) | ORCID: [0009-0008-9273-2458](https://orcid.org/0009-0008-9273-2458)
 
+### Artist-led reference
+
+Rain's personal artistic channel is the canonical starting point for the studio's artist reference catalog: [Rain God Music on YouTube](https://youtube.com/@raingodmusic). The studio is intended to help Rain develop and organize work while leaving artistic decisions and final approval with him. See [Artist Reference Workflow](docs/ARTIST_REFERENCE.md) for the proposed evidence-first process and data-handling boundaries.
+
+
 ---
 
 ## 🏗️ Architecture
