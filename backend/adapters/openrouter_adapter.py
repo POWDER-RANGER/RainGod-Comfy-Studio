@@ -5,9 +5,11 @@ Signup: https://openrouter.ai
 
 from __future__ import annotations
 
-import os
-import httpx
 import logging
+import os
+from typing import cast
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -35,24 +37,34 @@ class OpenRouterAdapter:
             timeout=90.0,
         )
 
-    async def generate(self, prompt: str, model: str = FREE_MODELS[0], system: str | None = None, temperature: float = 0.7, max_tokens: int = 2048) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        model: str = FREE_MODELS[0],
+        system: str | None = None,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> str:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        resp = await self._client.post("/chat/completions", json={
-            "model": model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        })
+        resp = await self._client.post(
+            "/chat/completions",
+            json={
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            },
+        )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        return cast(str, resp.json()["choices"][0]["message"]["content"])
 
     async def models(self) -> list[dict]:
         resp = await self._client.get("/models")
         resp.raise_for_status()
-        return resp.json().get("data", [])
+        return cast(list[dict], resp.json().get("data", []))
 
     async def close(self) -> None:
         await self._client.aclose()

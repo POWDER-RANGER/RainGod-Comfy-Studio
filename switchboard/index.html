@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RAINGOD Switchboard</title>
+  <title>Rain God’s Sad Boy Pipeline</title>
   <style>
     /* ------------------------------------------------------------------ */
     /* Reset & Base                                                          */
@@ -448,7 +448,7 @@
   <!-- Header                                                             -->
   <!-- ================================================================ -->
   <header>
-    <div class="logo">⚡ RAINGOD</div>
+    <div class="logo">SAD BOY PIPELINE</div>
     <span style="font-size:12px; color:var(--text-dim); margin-left:4px;">Switchboard</span>
     <div class="header-spacer"></div>
     <div class="status-pill">
@@ -726,6 +726,8 @@ let _presetsCache = null;
 let _selectedPreset = 'quality';
 let _selectedResolution = 'cover_art';
 let _selectedLora = '';
+let _activePromptId = null;
+let _generationStartedAt = 0;
 
 /* -------------------------------------------------------------------- */
 /* Boot                                                                   */
@@ -910,6 +912,10 @@ function renderPresetTables(data) {
 async function submitGenerate() {
   const positive = document.getElementById('gen-positive').value.trim();
   if (!positive) { showAlert('gen-alert-err', 'Positive prompt is required.'); return; }
+  if (_activePromptId) {
+    showAlert('gen-alert-err', 'A generation is already being tracked. Wait for it to finish or time out first.');
+    return;
+  }
 
   const seedVal = document.getElementById('gen-seed').value;
   const payload = {
@@ -923,31 +929,85 @@ async function submitGenerate() {
   if (seedVal !== '') payload.seed = parseInt(seedVal, 10);
 
   hideAlerts();
-  setGenerating(true);
+  setGenerating(true, 'Submitting request to ComfyUI…');
+  const resultImage = document.getElementById('result-img');
+  resultImage.removeAttribute('src');
+  resultImage.style.display = 'none';
 
   const { ok, data } = await apiFetch('/generate', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 
-  if (ok) {
-    showAlert('gen-alert-ok', `Queued! prompt_id: ${data.prompt_id} · job: ${data.job_id} · est. ${data.estimated_time}`);
-    document.getElementById('result-json').textContent = JSON.stringify(data, null, 2);
-    document.getElementById('result-json').style.display = 'block';
-    addActivity(`Generated: ${data.prompt_id.slice(0, 8)}… (${_selectedPreset} / ${_selectedResolution})`);
-  } else {
-    showAlert('gen-alert-err', `Error ${data.status}: ${data.detail || JSON.stringify(data)}`);
+  if (!ok) {
+    showAlert('gen-alert-err', `Error ${data.status || ''}: ${data.detail || JSON.stringify(data)}`);
+    setGenerating(false);
+    return;
   }
 
-  setGenerating(false);
+  _activePromptId = data.prompt_id;
+  _generationStartedAt = Date.now();
+  showAlert('gen-alert-ok', `Queued. Tracking real ComfyUI job ${data.prompt_id}. This panel will show the image when it is ready.`);
+  document.getElementById('result-json').textContent = JSON.stringify(data, null, 2);
+  document.getElementById('result-json').style.display = 'block';
+  addActivity(`Queued: ${data.prompt_id.slice(0, 8)}… (${_selectedPreset} / ${_selectedResolution})`);
+  await pollGeneration(data.prompt_id);
 }
 
-function setGenerating(active) {
+async function pollGeneration(promptId) {
+  if (_activePromptId !== promptId) return;
+  if (Date.now() - _generationStartedAt > 10 * 60 * 1000) {
+    showAlert('gen-alert-err', 'Stopped checking after 10 minutes. The ComfyUI job may still be running; check Queue Status before submitting again.');
+    _activePromptId = null;
+    setGenerating(false);
+    return;
+  }
+
+  const { ok, data } = await apiFetch(`/jobs/${encodeURIComponent(promptId)}`);
+  if (!ok) {
+    showAlert('gen-alert-err', `Could not verify job status: ${data.detail || JSON.stringify(data)}`);
+    _activePromptId = null;
+    setGenerating(false);
+    return;
+  }
+
+  document.getElementById('result-json').textContent = JSON.stringify(data, null, 2);
+  if (data.status === 'completed') {
+    _activePromptId = null;
+    setGenerating(false);
+    refreshQueue();
+    if (Array.isArray(data.images) && data.images.length > 0) {
+      const image = document.getElementById('result-img');
+      image.src = API_BASE + data.images[0].url;
+      image.style.display = 'block';
+      showAlert('gen-alert-ok', `Generation completed. Displaying output 1 of ${data.images.length}. Job: ${promptId}`);
+      addActivity(`Completed: ${promptId.slice(0, 8)}… — ${data.images.length} image output(s)`);
+    } else {
+      showAlert('gen-alert-err', 'ComfyUI reported completion but returned no image outputs for this workflow.');
+      addActivity(`Completed without images: ${promptId.slice(0, 8)}…`);
+    }
+    return;
+  }
+
+  if (data.status === 'error') {
+    _activePromptId = null;
+    setGenerating(false);
+    showAlert('gen-alert-err', `ComfyUI reported a generation error for job ${promptId}. Check backend/ComfyUI logs for details.`);
+    addActivity(`Failed: ${promptId.slice(0, 8)}…`);
+    refreshQueue();
+    return;
+  }
+
+  setGenerating(true, `ComfyUI job ${data.status || 'pending'}…`);
+  window.setTimeout(() => { void pollGeneration(promptId); }, 2000);
+}
+
+function setGenerating(active, message = '') {
   const btn = document.getElementById('gen-btn');
   const prog = document.getElementById('gen-progress');
   btn.disabled = active;
   prog.style.display = active ? 'block' : 'none';
-  document.getElementById('gen-progress-label').textContent = active ? 'Queuing request…' : '';
+  document.getElementById('gen-progress-label').textContent = active ? (message || 'Working…') : '';
 }
 
 function showAlert(id, msg) {
