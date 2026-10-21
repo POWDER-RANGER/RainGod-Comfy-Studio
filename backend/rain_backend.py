@@ -23,11 +23,13 @@ import mimetypes
 import os
 import time
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Path as FPath
+from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import Path as FPath
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
@@ -39,8 +41,8 @@ from .rain_backend_config import (
     RESOLUTION_PRESETS,
     SAMPLER_PRESETS,
     QualityTier,
-    config as rain_config,
 )
+from .rain_backend_config import config as rain_config
 from .workflow_builder import WorkflowBuilder
 
 # ---------------------------------------------------------------------------
@@ -79,7 +81,7 @@ OUTPUT_DIR = Path("outputs")
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):  # noqa: ARG001
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     """FastAPI lifespan handler — initialise and tear down the ComfyUI client."""
     global client
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -97,8 +99,8 @@ async def lifespan(application: FastAPI):  # noqa: ARG001
 # Application
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="Rain God’s Sad Boy Pipeline API",
-    description="Artist-controlled creative generation API for Rain God’s Sad Boy Pipeline",
+    title="Rain God's Sad Boy Pipeline API",
+    description="Artist-controlled creative generation API for Rain God's Sad Boy Pipeline",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -222,7 +224,7 @@ def _queue_contains(items: Any, prompt_id: str) -> bool:
     for item in items:
         if isinstance(item, dict) and item.get("prompt_id") == prompt_id:
             return True
-        if isinstance(item, (list, tuple)) and len(item) > 1 and item[1] == prompt_id:
+        if isinstance(item, list | tuple) and len(item) > 1 and item[1] == prompt_id:
             return True
     return False
 
@@ -235,7 +237,7 @@ def _queue_contains(items: Any, prompt_id: str) -> bool:
 @app.get("/", summary="Root")
 async def root() -> dict[str, str]:
     return {
-        "name": "Rain God’s Sad Boy Pipeline API",
+        "name": "Rain God's Sad Boy Pipeline API",
         "version": "1.0.0",
         "docs": "/docs",
         "health": "/health",

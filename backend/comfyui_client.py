@@ -25,7 +25,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .rain_backend_config import ComfyUIConfig, config as global_config
+from .rain_backend_config import ComfyUIConfig
+from .rain_backend_config import config as global_config
 
 logger = logging.getLogger(__name__)
 

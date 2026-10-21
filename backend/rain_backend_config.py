@@ -31,7 +31,7 @@ class QualityTier(str, Enum):
 class GPUTier(str, Enum):
     CPU_ONLY = "cpu"
     LOW_VRAM = "low_vram"  # < 8 GB
-    MID_VRAM = "mid_vram"  # 8–16 GB
+    MID_VRAM = "mid_vram"  # 8-16 GB
     HIGH_VRAM = "high_vram"  # > 16 GB
 
 

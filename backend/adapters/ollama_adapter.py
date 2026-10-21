@@ -63,7 +63,7 @@ class OllamaAdapter:
             "options": _DEFAULT_OPTIONS,
         }
         if system:
-            payload["messages"] = [{"role": "system", "content": system}] + messages
+            payload["messages"] = [{"role": "system", "content": system}, *messages]
         resp = await self._client.post(f"{self._base}/api/chat", json=payload)
         resp.raise_for_status()
         return resp.json()["message"]["content"]

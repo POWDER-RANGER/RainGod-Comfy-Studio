@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import os
-import httpx
 import logging
+import os
 from typing import Any
+
+import httpx
 
 logger = logging.getLogger(__name__)
 

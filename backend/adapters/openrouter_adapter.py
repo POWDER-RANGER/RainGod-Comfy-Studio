@@ -5,9 +5,10 @@ Signup: https://openrouter.ai
 
 from __future__ import annotations
 
-import os
-import httpx
 import logging
+import os
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
