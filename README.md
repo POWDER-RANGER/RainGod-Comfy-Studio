@@ -1,4 +1,4 @@
-# ⚡ RayneGod Comfy Studio
+# ⚡ Rain God Comfy Studio
 
 > **Production-grade AI music visual generation studio — node-based workflow engine + ComfyUI backend**
 
