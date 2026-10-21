@@ -332,3 +332,23 @@ class RainGodDispatcher:
             "replicate": self._replicate is not None,
             "huggingface": self._hf is not None,
         }
+
+    async def close(self) -> None:
+        """Close initialized provider clients during application shutdown."""
+        adapters = (
+            self._local,
+            self._groq,
+            self._gemini,
+            self._suno,
+            self._comfy_cloud,
+            self._openrouter,
+            self._replicate,
+            self._hf,
+        )
+        for adapter in adapters:
+            if adapter is None:
+                continue
+            try:
+                await adapter.close()
+            except Exception:
+                logger.exception("Failed to close adapter %s", type(adapter).__name__)
