@@ -35,6 +35,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 from requests.exceptions import RequestException
 
+from . import project_store
 from .comfyui_client import ComfyUIClient
 from .rain_backend_config import (
     LORA_MAPPINGS,
@@ -53,6 +54,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
 logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # CORS — driven by ALLOWED_ORIGINS environment variable
@@ -142,6 +144,16 @@ class GenerateRequest(BaseModel):
     seed: int | None = Field(default=None, ge=0, description="Random seed")
     quality_tier: QualityTier = Field(default=QualityTier.STANDARD)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    project_id: str | None = Field(default=None, min_length=1, max_length=64)
+    approved: bool = Field(
+        default=False,
+        description="Explicit approval required when recording this generation in a project",
+    )
+
+
+class CreateProjectRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: str = Field(default="", max_length=2000)
 
 
 class BatchGenerateRequest(BaseModel):
@@ -188,6 +200,14 @@ def _read_prompt_history(cl: ComfyUIClient, prompt_id: str) -> dict[str, Any]:
             status_code=503,
             detail="ComfyUI history is currently unavailable",
         ) from exc
+
+
+def _persist_provider_job_status(prompt_id: str, status: str) -> None:
+    """Best-effort reconciliation; upstream status remains readable if local storage is down."""
+    try:
+        project_store.update_job_status_by_provider_id(prompt_id, status)
+    except Exception:
+        logger.exception("Could not reconcile local job status for prompt_id=%s", prompt_id)
 
 
 def _history_images(history: dict[str, Any]) -> list[dict[str, str]]:
@@ -310,6 +330,14 @@ async def generate(
     """Submit a single image generation request to ComfyUI."""
     cl = _get_client()
 
+    if req.project_id and not req.approved:
+        raise HTTPException(
+            status_code=400,
+            detail="Set approved=true to record a generation under a project",
+        )
+    if req.project_id and project_store.get_project(req.project_id) is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     if req.preset not in SAMPLER_PRESETS:
         raise HTTPException(status_code=400, detail=f"Unknown preset: {req.preset}")
     if req.resolution not in RESOLUTION_PRESETS:
@@ -333,15 +361,57 @@ async def generate(
         lora=lora_cfg,
     )
 
+    job_id = str(uuid.uuid4())
+    if req.project_id:
+        try:
+            project_store.create_generation_job(
+                project_id=req.project_id,
+                job_id=job_id,
+                request={
+                    "prompt": req.prompt,
+                    "negative_prompt": req.negative_prompt,
+                    "preset": req.preset,
+                    "resolution": req.resolution,
+                    "lora_style": req.lora_style,
+                    "quality_tier": req.quality_tier.value,
+                    "metadata": req.metadata,
+                },
+                provenance={
+                    "provider": "comfyui",
+                    "workflow": "txt2img",
+                    "workflow_version": 1,
+                    "seed": seed,
+                    "width": resolution["width"],
+                    "height": resolution["height"],
+                    "steps": sampler.steps,
+                    "cfg": sampler.cfg,
+                    "sampler_name": sampler.sampler_name,
+                    "scheduler": sampler.scheduler,
+                },
+                approval={
+                    "decision": "approved",
+                    "policy_version": "local-project-generation-v1",
+                    "approved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
+            )
+        except Exception as exc:
+            logger.exception("Could not persist project generation job")
+            raise HTTPException(
+                status_code=503, detail="Project job storage is unavailable"
+            ) from exc
+
     try:
         prompt_id = cl.queue_prompt(workflow)
     except RuntimeError as exc:
+        if req.project_id:
+            project_store.update_generation_job(job_id, status="failed", error=str(exc))
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if req.project_id:
+        project_store.update_generation_job(job_id, status="queued", provider_job_id=prompt_id)
 
     estimated_steps = sampler.steps
     estimated_seconds = estimated_steps * 0.3  # rough estimate
-    job_id = str(uuid.uuid4())
-
     logger.info(
         "Generation queued job_id=%s prompt_id=%s preset=%s resolution=%s",
         job_id,
@@ -349,7 +419,6 @@ async def generate(
         req.preset,
         req.resolution,
     )
-
     return GenerateResponse(
         prompt_id=prompt_id,
         job_id=job_id,
@@ -359,6 +428,63 @@ async def generate(
         resolution_used=resolution,
         metadata={**req.metadata, "seed": seed},
     )
+
+
+@app.post("/projects", status_code=201, summary="Create a local creative project")
+async def create_project(req: CreateProjectRequest) -> dict[str, Any]:
+    """Create a project in the local SQLite development store."""
+    try:
+        return project_store.create_project(req.name.strip(), req.description.strip())
+    except Exception as exc:
+        logger.exception("Could not create project")
+        raise HTTPException(status_code=503, detail="Project storage is unavailable") from exc
+
+
+@app.get("/projects/{project_id}", summary="Read a project and its generation records")
+async def read_project(
+    project_id: Annotated[str, FPath(min_length=1, max_length=64)],
+) -> dict[str, Any]:
+    """Return project metadata and studio-owned job/provenance records."""
+    try:
+        project = project_store.get_project(project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        project["jobs"] = project_store.list_project_jobs(project_id)
+        project["assets"] = project_store.list_project_assets(project_id)
+        for asset in project["assets"]:
+            asset["url"] = f"/projects/{project_id}/assets/{asset['id']}"
+        return project
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Could not read project")
+        raise HTTPException(status_code=503, detail="Project storage is unavailable") from exc
+
+
+@app.get(
+    "/projects/{project_id}/assets/{asset_id}",
+    summary="Retrieve a locally persisted project image",
+)
+async def read_project_asset(
+    project_id: Annotated[str, FPath(min_length=1, max_length=64)],
+    asset_id: Annotated[str, FPath(min_length=1, max_length=64)],
+) -> Response:
+    """Read image bytes from local project storage rather than ComfyUI history."""
+    try:
+        asset, content = project_store.load_project_asset(project_id, asset_id)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="Project asset not found")
+        assert content is not None
+        return Response(
+            content=content,
+            media_type=asset["mime_type"],
+            headers={"Cache-Control": "no-store"},
+        )
+    except HTTPException:
+        raise
+    except OSError as exc:
+        logger.exception("Could not read local project asset")
+        raise HTTPException(status_code=503, detail="Project asset storage is unavailable") from exc
 
 
 @app.post("/batch-generate", status_code=202)
@@ -428,6 +554,7 @@ async def get_job_status(
             status = "completed"
         else:
             status = str(upstream_status.get("status_str") or "running")
+        _persist_provider_job_status(prompt_id, status)
         image_items = _history_images(history)
         return {
             "prompt_id": prompt_id,
@@ -457,6 +584,7 @@ async def get_job_status(
             detail="Prompt was not found in ComfyUI history or queue",
         )
 
+    _persist_provider_job_status(prompt_id, status)
     return {"prompt_id": prompt_id, "status": status, "completed": False, "images": []}
 
 
@@ -489,7 +617,18 @@ async def get_job_image(
             detail="Unable to retrieve the generated image from ComfyUI",
         ) from exc
 
-    return Response(content=content, media_type=media_type, headers={"Cache-Control": "no-store"})
+    try:
+        asset = project_store.save_project_asset(prompt_id, image["filename"], media_type, content)
+    except ValueError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Could not persist generated project image")
+        raise HTTPException(status_code=503, detail="Project asset storage is unavailable") from exc
+
+    headers = {"Cache-Control": "no-store"}
+    if asset is not None:
+        headers["X-RainGod-Asset-ID"] = asset["id"]
+    return Response(content=content, media_type=media_type, headers=headers)
 
 
 @app.get("/outputs/{filename}", summary="Retrieve generated image")
@@ -499,8 +638,10 @@ async def get_output(
     path = OUTPUT_DIR / filename
     if not path.exists() or not path.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {filename}")
-    # Prevent path traversal
+    # Compare path components instead of string prefixes. A prefix check would
+    # incorrectly allow sibling paths such as ``outputs-private/secret.png``.
     resolved = path.resolve()
+    # Prevent path traversal
     if not str(resolved).startswith(str(OUTPUT_DIR.resolve())):
         raise HTTPException(status_code=403, detail="Forbidden")
     return FileResponse(resolved)
