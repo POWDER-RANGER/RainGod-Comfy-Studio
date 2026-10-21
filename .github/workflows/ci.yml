@@ -29,16 +29,13 @@ jobs:
       - name: Install lint deps
         run: |
           pip install --upgrade pip
-          pip install ruff mypy
-          pip install -r backend/requirements.txt --ignore-requires-python
+          pip install -r backend/requirements-dev.txt --ignore-requires-python
 
       - name: Ruff format check
         run: ruff format --check backend/
 
       - name: Ruff lint
-        run: |
-          ruff check --fix backend/ || true  # temporary safe-fix audit; restore strict check after applying fixes
-          git diff -- backend/
+        run: ruff check backend/
 
       - name: MyPy
         run: mypy backend/ --ignore-missing-imports
@@ -67,7 +64,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r backend/requirements.txt --ignore-requires-python
+          pip install -r backend/requirements-dev.txt --ignore-requires-python
 
       - name: Run tests
         run: |

@@ -228,8 +228,13 @@ class ComfyUIClient:
         """Return the full history entry for a completed prompt."""
         url = f"{self._cfg.history_url}/{prompt_id}"
         resp = self._request("GET", url)
-        data: dict[str, Any] = resp.json()
-        return data.get(prompt_id, {})
+        data = resp.json()
+        if not isinstance(data, dict):
+            return {}
+        history = data.get(prompt_id, {})
+        if not isinstance(history, dict):
+            return {}
+        return {str(key): value for key, value in history.items()}
 
     def wait_for_completion(
         self,

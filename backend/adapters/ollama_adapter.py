@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -51,7 +51,7 @@ class OllamaAdapter:
             payload["format"] = format
         resp = await self._client.post(f"{self._base}/api/generate", json=payload)
         resp.raise_for_status()
-        return resp.json()["response"]
+        return cast(str, resp.json()["response"])
 
     async def chat(
         self, messages: list[dict], model: str = "dolphin-llama3:8b", system: str | None = None
@@ -66,7 +66,7 @@ class OllamaAdapter:
             payload["messages"] = [{"role": "system", "content": system}, *messages]
         resp = await self._client.post(f"{self._base}/api/chat", json=payload)
         resp.raise_for_status()
-        return resp.json()["message"]["content"]
+        return cast(str, resp.json()["message"]["content"])
 
     async def vision(
         self, image_url: str, prompt: str = "Describe this image.", model: str = "moondream:1.8b"
@@ -87,7 +87,7 @@ class OllamaAdapter:
             f"{self._base}/api/embed", json={"model": model, "input": text}
         )
         resp.raise_for_status()
-        return resp.json().get("embeddings", [[]])[0]
+        return cast(list[float], resp.json().get("embeddings", [[]])[0])
 
     async def health(self) -> bool:
         try:
