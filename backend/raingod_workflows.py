@@ -9,8 +9,7 @@ from typing import Any
 RAINGOD_SDXL_PRESET = {
     "name": "Rain God - SDXL Lo-Fi Anime",
     "description": (
-        "SDXL optimized for rain god's aesthetic: lo-fi anime, late-night, moody, "
-        "retro nostalgia"
+        "SDXL optimized for rain god's aesthetic: lo-fi anime, late-night, moody, retro nostalgia"
     ),
     "model": "SDXL",
     "params": {
