@@ -80,7 +80,7 @@ class OllamaAdapter:
         payload = {"model": model, "prompt": prompt, "images": [img_b64], "stream": False}
         resp = await self._client.post(f"{self._base}/api/generate", json=payload)
         resp.raise_for_status()
-        return resp.json()["response"]
+        return cast(str, resp.json()["response"])
 
     async def embed(self, text: str, model: str = "nomic-embed-text") -> list[float]:
         resp = await self._client.post(
