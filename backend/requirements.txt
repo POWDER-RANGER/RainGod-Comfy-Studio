@@ -16,7 +16,6 @@ anyio==4.3.0
 aiofiles==23.2.1
 
 # Image processing and logging
-Pillow==13.0.0
 rich==13.7.1
 python-json-logger==2.0.7
 python-dotenv==1.0.1
