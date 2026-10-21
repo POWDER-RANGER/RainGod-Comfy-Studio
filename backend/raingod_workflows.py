@@ -47,9 +47,7 @@ RAINGOD_FLUX_PRESET = {
             "reflecting off wet streets, emotional, cinematic, 1990s vibe, Japanese aesthetic, "
             "moody color grading"
         ),
-        "negative_prompt": (
-            "bright, cheerful, cartoon, digital art, unrealistic, blurry"
-        ),
+        "negative_prompt": "bright, cheerful, cartoon, digital art, unrealistic, blurry",
         "width": 1024,
         "height": 1024,
         "steps": 20,
