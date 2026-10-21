@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import cast
 
 import httpx
 
@@ -48,7 +49,7 @@ class GroqAdapter:
             },
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        return cast(str, resp.json()["choices"][0]["message"]["content"])
 
     async def close(self) -> None:
         await self._client.aclose()
