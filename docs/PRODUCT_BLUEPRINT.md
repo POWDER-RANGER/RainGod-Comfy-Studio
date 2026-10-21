@@ -51,8 +51,9 @@ The current change adds a regression test ensuring a non-image file referenced b
 | `ruff check backend/` | **Passed** |
 | `mypy backend/ --ignore-missing-imports` | **Passed**, 20 source files |
 | GitHub Actions run #101 on current `main` | **Passed** all lint/type, Python matrix, and Docker jobs |
+| GitHub Actions run [#102](https://github.com/POWDER-RANGER/RainGod-Comfy-Studio/actions/runs/39536214550) on PR #45 | **Passed** formatter, lint, MyPy, Python 3.10/3.11 tests, and Docker |
 
-The Windows checkout has CRLF working copies for many tracked Python files, while the GitHub runner checks LF files. Therefore the local formatter output is not comparable to Linux CI. CI run #101 confirms the full formatter check passes on current `main`. PR #45 still needs its own CI run after it is updated to the current base. These tests use mocked ComfyUI responses and do not prove live image generation.
+The Windows checkout has CRLF working copies for many tracked Python files, while the GitHub runner checks LF files. Therefore the local formatter output is not comparable to Linux CI. CI run #102 confirms the full formatter check and other required jobs pass on PR #45. These tests use mocked ComfyUI responses and do not prove live image generation.
 
 ## Recommended architecture
 
@@ -114,7 +115,7 @@ Render service previews copy service settings, including environment variables, 
 
 ## Immediate next actions
 
-1. Update PR #45 to current `main` and require its own CI run; review the project blueprint and new image-output safety regression test.
+1. Review PR #45, whose CI is green, then proceed with the project-backed image job and persistence slice.
 2. Use the next implementation PR to add the smallest project-backed image job record and persistence design, with provider contract tests that remain clearly mocked; defer the real GPU test until private staging controls and a capped GPU account are in place.
 3. Reconcile `README.md` and `docs/ARCHITECTURE.md` with the actual tree and status, including duplicate modules under `files/`, current endpoint/auth behavior, job persistence limits, and unverified adapter claims.
 4. Run the staged end-to-end image proof, then separately schedule discovery and implementation for each music workflow.
