@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import os
-import httpx
 import logging
+import os
 from typing import Any
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ class ComfyCloudAdapter:
             timeout=300.0,
         )
 
-    async def generate(self, payload: dict[str, Any], poll_interval: float = 3.0, max_wait: float = 300.0) -> dict[str, Any]:
+    async def generate(
+        self, payload: dict[str, Any], poll_interval: float = 3.0, max_wait: float = 300.0
+    ) -> dict[str, Any]:
         workflow = payload.get("workflow") or _build_sdxl_workflow(payload)
         resp = await self._client.post("/runs", json={"workflow": workflow})
         resp.raise_for_status()
@@ -53,7 +56,11 @@ class ComfyCloudAdapter:
                 for node_out in run.get("outputs", {}).values():
                     for img in node_out.get("images", []):
                         urls.append(img.get("url"))
-                return {"run_id": run_id, "image_urls": urls, "image_url": urls[0] if urls else None}
+                return {
+                    "run_id": run_id,
+                    "image_urls": urls,
+                    "image_url": urls[0] if urls else None,
+                }
             if status in ("failed", "cancelled"):
                 raise RuntimeError(f"Comfy Cloud run {run_id} {status}: {run.get('error')}")
             logger.debug("Comfy Cloud run %s: %s (%.0fs)", run_id, status, elapsed)
@@ -65,13 +72,46 @@ class ComfyCloudAdapter:
 
 def _build_sdxl_workflow(p: dict) -> dict:
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": p.get("checkpoint", "sd_xl_base_1.0.safetensors")}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": p.get("prompt", ""), "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": p.get("negative_prompt", ""), "clip": ["1", 1]}},
-        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": p.get("width", 1024), "height": p.get("height", 1024), "batch_size": 1}},
-        "5": {"class_type": "KSampler", "inputs": {"model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0], "seed": p.get("seed", 0), "steps": p.get("steps", 20), "cfg": p.get("cfg", 7.0), "sampler_name": "euler_ancestral", "scheduler": "normal", "denoise": 1.0}},
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": p.get("checkpoint", "sd_xl_base_1.0.safetensors")},
+        },
+        "2": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": p.get("prompt", ""), "clip": ["1", 1]},
+        },
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": p.get("negative_prompt", ""), "clip": ["1", 1]},
+        },
+        "4": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {
+                "width": p.get("width", 1024),
+                "height": p.get("height", 1024),
+                "batch_size": 1,
+            },
+        },
+        "5": {
+            "class_type": "KSampler",
+            "inputs": {
+                "model": ["1", 0],
+                "positive": ["2", 0],
+                "negative": ["3", 0],
+                "latent_image": ["4", 0],
+                "seed": p.get("seed", 0),
+                "steps": p.get("steps", 20),
+                "cfg": p.get("cfg", 7.0),
+                "sampler_name": "euler_ancestral",
+                "scheduler": "normal",
+                "denoise": 1.0,
+            },
+        },
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
-        "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "raingod"}},
+        "7": {
+            "class_type": "SaveImage",
+            "inputs": {"images": ["6", 0], "filename_prefix": "raingod"},
+        },
     }
 
 
@@ -84,6 +124,7 @@ _ANIMATEDIFF_STUB = {
 
 def _patch_animatediff(wf: dict, p: dict) -> dict:
     import uuid
+
     wf = copy.deepcopy(wf)
     if "2" in wf:
         wf["2"]["inputs"]["text"] = p.get("prompt", "")

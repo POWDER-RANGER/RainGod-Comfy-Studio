@@ -1,6 +1,8 @@
-# ⚡ RayneGod Comfy Studio
+# Rain God’s Sad Boy Pipeline
 
-> **Production-grade AI music visual generation studio — node-based workflow engine + ComfyUI backend**
+> **An artist-controlled creative production workspace for music projects, lyrics, beats, cover art, and music-video assets.**
+>
+> Powered by ComfyUI and selected, explicitly verified integrations. Features are documented as working only after they pass the relevant tests.
 
 [![CI](https://github.com/POWDER-RANGER/RainGod-Comfy-Studio/actions/workflows/ci.yml/badge.svg)](https://github.com/POWDER-RANGER/RainGod-Comfy-Studio/actions/workflows/ci.yml)
 [![Security Scans](https://github.com/POWDER-RANGER/RainGod-Comfy-Studio/actions/workflows/security.yml/badge.svg)](https://github.com/POWDER-RANGER/RainGod-Comfy-Studio/actions/workflows/security.yml)
@@ -10,15 +12,24 @@
 
 ---
 
-## 🎯 Overview
+## Overview
 
-RainGod Comfy Studio is the unified visual generation engine and workflow interface for the **RAINGOD AI Music Kit** — combining a node-based studio frontend with a production-grade FastAPI backend wired directly into ComfyUI.
+Rain God’s Sad Boy Pipeline is the **single master project** for Rain’s creative workflow. It brings project organization, creative references, prompt/workflow control, generation orchestration, and output provenance together around Rain’s own artistic direction. The aim is to help Rain make more work with control—not to replace his taste or decisions.
+
+This repository is the only active studio codebase. Existing Rain God Studio variants are historical/reference sources, not separate products. The `POWDER-RANGER/ComfyUI` fork remains a generation engine/dependency rather than a competing studio. We will reuse good components where they fit, but keep the artist-facing experience and workflow tailored to Rain.
+
+**Verification policy:** a configured endpoint, preset, mock test, or planned integration is not proof of a working generation feature. Real output, provider status, setup requirements, and known limitations must be recorded separately.
 
 Built by **Curtis Charles Farrar** ([@POWDER-RANGER](https://github.com/POWDER-RANGER)) | ORCID: [0009-0008-9273-2458](https://orcid.org/0009-0008-9273-2458)
 
+### Artist-led reference
+
+Rain's personal artistic channel is the canonical starting point for the studio's artist reference catalog: [Rain God Music on YouTube](https://youtube.com/@raingodmusic). The studio is intended to help Rain develop and organize work while leaving artistic decisions and final approval with him. See [Artist Reference Workflow](docs/ARTIST_REFERENCE.md) for the proposed evidence-first process and data-handling boundaries.
+
+
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 RainGod Comfy Studio
@@ -48,7 +59,7 @@ RainGod Comfy Studio
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/POWDER-RANGER/RainGod-Comfy-Studio.git
@@ -69,7 +80,7 @@ Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` i
 
 ---
 
-## 🔧 Backend API
+## Backend API
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -83,7 +94,7 @@ Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` i
 
 ---
 
-## 🎨 Workflow Templates
+## Workflow Templates
 
 | Template | Steps | Resolution | Notes |
 |----------|-------|-----------|-------|
@@ -96,7 +107,9 @@ Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` i
 
 ---
 
-## 🔌 Provider Adapters (`files/`)
+## Provider Adapters (`backend/adapters/` and `files/`)
+
+The repository currently contains adapters and duplicate/older provider-related code in more than one location. Treat this inventory as an audit target, not a promise that every adapter is fully operational. The canonical modules will be determined by imports and tests before any duplicate is removed.
 
 | Adapter | Provider | Use Case |
 |---------|----------|----------|
@@ -110,7 +123,7 @@ Then open `http://localhost:8000/docs` for the API or `switchboard/index.html` i
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 pip install pytest pytest-cov
@@ -121,7 +134,7 @@ pytest tests/ --verbose --cov=backend --cov-report=term-missing
 
 ---
 
-## 🐳 Docker
+## Docker
 
 ```bash
 docker-compose up -d
@@ -131,7 +144,7 @@ Services: ComfyUI (:8188) + RAINGOD backend (:8000) + Redis + Nginx reverse prox
 
 ---
 
-## 📁 Windows Quick Launch
+## Windows Quick Launch
 
 ```powershell
 .\start_all.ps1
@@ -139,7 +152,7 @@ Services: ComfyUI (:8188) + RAINGOD backend (:8000) + Redis + Nginx reverse prox
 
 ---
 
-## 🔐 Security
+## Security
 
 - All GitHub Actions SHA-pinned
 - CodeQL + Bandit + OSV Scanner + DevSkim running on every push
@@ -150,16 +163,19 @@ Services: ComfyUI (:8188) + RAINGOD backend (:8000) + Redis + Nginx reverse prox
 
 ---
 
-## 📚 Documentation
+## Documentation
 
+- [`docs/PRODUCT_BLUEPRINT.md`](docs/PRODUCT_BLUEPRINT.md) — verified baseline, cloud architecture, approval/security boundaries, and prioritized implementation plan
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Full system architecture
+
+- [`docs/REPOSITORY_STRATEGY.md`](docs/REPOSITORY_STRATEGY.md) — canonical master repository and consolidation rules
 - [`INSTALLATION.md`](INSTALLATION.md) — Setup guide
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — Contribution guidelines
 - [`CONTACT.md`](CONTACT.md) — Contact & support
 
 ---
 
-## ⚖️ License
+## License
 
 MIT — see [LICENSE](LICENSE). Attribution required.  
 **Curtis Charles Farrar** | ORCID: [0009-0008-9273-2458](https://orcid.org/0009-0008-9273-2458)

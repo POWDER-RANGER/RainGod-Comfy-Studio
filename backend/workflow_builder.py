@@ -45,9 +45,7 @@ from typing import Any
 from .rain_backend_config import LoRAConfig
 
 # Default checkpoint — override via RAINGOD_CHECKPOINT env var
-_DEFAULT_CHECKPOINT = os.environ.get(
-    "RAINGOD_CHECKPOINT", "v1-5-pruned-emaonly.safetensors"
-)
+_DEFAULT_CHECKPOINT = os.environ.get("RAINGOD_CHECKPOINT", "v1-5-pruned-emaonly.safetensors")
 
 # Directory containing exported ComfyUI JSON templates
 _WORKFLOWS_DIR = Path(__file__).parent.parent / "workflows"
@@ -361,9 +359,7 @@ class WorkflowBuilder:
         """
         template_path = self.workflows_dir / f"{template_name}.json"
         if not template_path.exists():
-            raise FileNotFoundError(
-                f"Workflow template not found: {template_path}"
-            )
+            raise FileNotFoundError(f"Workflow template not found: {template_path}")
         with template_path.open(encoding="utf-8") as fh:
             graph: dict[str, Any] = json.load(fh)
 
@@ -376,11 +372,7 @@ class WorkflowBuilder:
         """Return the stems of all available ``.json`` template files."""
         if not self.workflows_dir.exists():
             return []
-        return sorted(
-            p.stem
-            for p in self.workflows_dir.iterdir()
-            if p.suffix == ".json"
-        )
+        return sorted(p.stem for p in self.workflows_dir.iterdir() if p.suffix == ".json")
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -434,9 +426,7 @@ class WorkflowBuilder:
         for dotted_path, value in patches.items():
             parts = dotted_path.split(".", 1)
             if len(parts) != 2:
-                raise ValueError(
-                    f"Patch key must be '<node_id>.<field>', got: {dotted_path!r}"
-                )
+                raise ValueError(f"Patch key must be '<node_id>.<field>', got: {dotted_path!r}")
             node_id, field = parts
             if node_id not in graph:
                 raise ValueError(
