@@ -59,6 +59,7 @@ def _single_line_log_value(value: object) -> str:
     """Escape line breaks before including untrusted values in log records."""
     return str(value).replace("\r", r"\r").replace("\n", r"\n")
 
+
 # ---------------------------------------------------------------------------
 # CORS — driven by ALLOWED_ORIGINS environment variable
 #
@@ -510,6 +511,6 @@ async def get_output(
     resolved = path.resolve()
     try:
         resolved.relative_to(output_root)
-    except ValueError:
-        raise HTTPException(status_code=403, detail="Forbidden")
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="Forbidden") from exc
     return FileResponse(resolved)
