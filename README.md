@@ -165,6 +165,7 @@ Services: ComfyUI (:8188) + RAINGOD backend (:8000) + Redis + Nginx reverse prox
 
 ## Documentation
 
+- [`docs/PRODUCT_BLUEPRINT.md`](docs/PRODUCT_BLUEPRINT.md) — verified baseline, cloud architecture, approval/security boundaries, and prioritized implementation plan
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Full system architecture
 
 - [`docs/REPOSITORY_STRATEGY.md`](docs/REPOSITORY_STRATEGY.md) — canonical master repository and consolidation rules
