@@ -8,12 +8,21 @@ from typing import Any
 
 RAINGOD_SDXL_PRESET = {
     "name": "Rain God - SDXL Lo-Fi Anime",
-    "description": "SDXL optimized for rain god's aesthetic: lo-fi anime, late-night, moody, retro nostalgia",
+    "description": (
+        "SDXL optimized for rain god's aesthetic: lo-fi anime, late-night, moody, "
+        "retro nostalgia"
+    ),
     "model": "SDXL",
     "params": {
         "checkpoint": "sdxl_1.0.safetensors",
-        "positive_prompt": "(lo-fi anime aesthetic:1.3), late night, raining heavily, neon reflections, sadboy aesthetic, VHS glitch, minor key energy, hyper-detailed",
-        "negative_prompt": "bright, cheerful, saturated colors, daylight, clear sky, digital art, 3d render, cartoon, unrealistic, blurry, low quality",
+        "positive_prompt": (
+            "(lo-fi anime aesthetic:1.3), late night, raining heavily, neon reflections, "
+            "sadboy aesthetic, VHS glitch, minor key energy, hyper-detailed"
+        ),
+        "negative_prompt": (
+            "bright, cheerful, saturated colors, daylight, clear sky, digital art, 3d render, "
+            "cartoon, unrealistic, blurry, low quality"
+        ),
         "width": 1024,
         "height": 1024,
         "steps": 25,
@@ -27,12 +36,20 @@ RAINGOD_SDXL_PRESET = {
 
 RAINGOD_FLUX_PRESET = {
     "name": "Rain God - Flux Ultra",
-    "description": "Flux optimized for maximum emotional depth and photorealism within his aesthetic",
+    "description": (
+        "Flux optimized for maximum emotional depth and photorealism within his aesthetic"
+    ),
     "model": "Flux",
     "params": {
         "checkpoint": "flux_dev.safetensors",
-        "positive_prompt": "(lo-fi anime aesthetic:1.2), late night photography, raining, neon city lights reflecting off wet streets, emotional, cinematic, 1990s vibe, Japanese aesthetic, moody color grading",
-        "negative_prompt": "bright, cheerful, cartoon, digital art, unrealistic, blurry",
+        "positive_prompt": (
+            "(lo-fi anime aesthetic:1.2), late night photography, raining, neon city lights "
+            "reflecting off wet streets, emotional, cinematic, 1990s vibe, Japanese aesthetic, "
+            "moody color grading"
+        ),
+        "negative_prompt": (
+            "bright, cheerful, cartoon, digital art, unrealistic, blurry"
+        ),
         "width": 1024,
         "height": 1024,
         "steps": 20,
@@ -46,11 +63,17 @@ RAINGOD_FLUX_PRESET = {
 
 RAINGOD_ANIMATEDIFF_PRESET = {
     "name": "Rain God - VHS Dream Animation",
-    "description": "AnimateDiff for video: rain, car interiors, late-night motion, melancholic energy",
+    "description": (
+        "AnimateDiff for video: rain, car interiors, late-night motion, melancholic energy"
+    ),
     "model": "AnimateDiff",
     "params": {
         "motion_model": "mm_sd15_v3.ckpt",
-        "positive_prompt": "(lo-fi anime aesthetic:1.2), late night drive, raining, Honda Fit interior, dashboard lights, wet windshield, melancholic motion, VHS glitch effect, cinematic, emotional",
+        "positive_prompt": (
+            "(lo-fi anime aesthetic:1.2), late night drive, raining, Honda Fit interior, "
+            "dashboard lights, wet windshield, melancholic motion, VHS glitch effect, "
+            "cinematic, emotional"
+        ),
         "negative_prompt": "bright, daytime, cheerful, cartoon",
         "width": 512,
         "height": 512,
