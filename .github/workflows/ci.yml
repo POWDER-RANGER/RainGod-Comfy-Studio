@@ -33,7 +33,7 @@ jobs:
           pip install -r backend/requirements.txt --ignore-requires-python
 
       - name: Ruff format check
-        run: ruff format --diff backend/ || true  # temporary format audit; revert to --check after applying formatter output
+        run: ruff format --check backend/
 
       - name: Ruff lint
         run: ruff check backend/
