@@ -640,15 +640,16 @@ async def get_job_image(
 async def get_output(
     filename: Annotated[str, FPath(description="Output filename")],
 ) -> FileResponse:
-    path = OUTPUT_DIR / filename
-    if not path.exists() or not path.is_file():
-        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
-    # Compare path components instead of string prefixes. A prefix check would
+    # Check containment before existence so out-of-root paths always return 403
+    # and responses do not reveal whether files exist outside the output root.
+    # Compare path components instead of string prefixes: a prefix check would
     # incorrectly allow sibling paths such as ``outputs-private/secret.png``.
     output_root = OUTPUT_DIR.resolve()
-    resolved = path.resolve()
+    resolved = (OUTPUT_DIR / filename).resolve()
     try:
         resolved.relative_to(output_root)
     except ValueError as exc:
         raise HTTPException(status_code=403, detail="Forbidden") from exc
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(resolved)
