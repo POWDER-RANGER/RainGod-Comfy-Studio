@@ -50,6 +50,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _single_line_log_value(value: object) -> str:
+    """Escape line breaks before including untrusted values in log records."""
+    return str(value).replace("\r", r"\r").replace("\n", r"\n")
+
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
@@ -263,7 +268,7 @@ async def generate(
 
     logger.info(
         "Generation queued job_id=%s prompt_id=%s preset=%s resolution=%s",
-        job_id, prompt_id, req.preset, req.resolution,
+        job_id, _single_line_log_value(prompt_id), req.preset, req.resolution,
     )
 
     return GenerateResponse(
@@ -329,10 +334,16 @@ async def cancel_queue_item(
 async def get_output(
     filename: Annotated[str, FPath(description="Output filename")],
 ) -> FileResponse:
-    path = OUTPUT_DIR / filename
-    if not path.exists() or not path.is_file():
-        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
-    resolved = path.resolve()
-    if not str(resolved).startswith(str(OUTPUT_DIR.resolve())):
-        raise HTTPException(status_code=403, detail="Forbidden")
+    # Check containment before existence so out-of-root paths always return 403
+    # and responses do not reveal whether files exist outside the output root.
+    # Compare path components instead of string prefixes: a prefix check would
+    # incorrectly allow sibling paths such as ``outputs-private/secret.png``.
+    output_root = OUTPUT_DIR.resolve()
+    resolved = (OUTPUT_DIR / filename).resolve()
+    try:
+        resolved.relative_to(output_root)
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="Forbidden") from exc
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(resolved)

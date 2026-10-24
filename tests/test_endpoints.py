@@ -261,6 +261,55 @@ class TestOutputs:
         # Should be 400 (validation) or 404, never 200
         assert r.status_code in (400, 404, 422)
 
+    @pytest.mark.asyncio
+    async def test_sibling_prefix_path_is_forbidden(self, tmp_path, monkeypatch):
+        """A sibling directory sharing the outputs prefix is still outside it."""
+        import backend.rain_backend as mod
+        from fastapi import HTTPException
+
+        output_dir = tmp_path / "outputs"
+        sibling_dir = tmp_path / "outputs-private"
+        output_dir.mkdir()
+        sibling_dir.mkdir()
+        (sibling_dir / "secret.png").write_bytes(b"private")
+        monkeypatch.setattr(mod, "OUTPUT_DIR", output_dir)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await mod.get_output("../outputs-private/secret.png")
+
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_outside_path_is_forbidden(self, tmp_path, monkeypatch):
+        """Out-of-root paths return 403 whether or not the target exists."""
+        import backend.rain_backend as mod
+        from fastapi import HTTPException
+
+        output_dir = tmp_path / "outputs"
+        output_dir.mkdir()
+        monkeypatch.setattr(mod, "OUTPUT_DIR", output_dir)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await mod.get_output("../outputs-private/missing.png")
+
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_missing_file_does_not_echo_filename(self, tmp_path, monkeypatch):
+        """In-root misses return a fixed 404 detail without reflecting input."""
+        import backend.rain_backend as mod
+        from fastapi import HTTPException
+
+        output_dir = tmp_path / "outputs"
+        output_dir.mkdir()
+        monkeypatch.setattr(mod, "OUTPUT_DIR", output_dir)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await mod.get_output("missing-<script>.png")
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail == "File not found"
+
     def test_valid_file_served(self, client, tmp_path, monkeypatch):
         """A file that exists in the outputs dir should be served."""
         from pathlib import Path
