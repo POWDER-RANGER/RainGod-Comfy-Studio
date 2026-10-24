@@ -261,6 +261,24 @@ class TestOutputs:
         # Should be 400 (validation) or 404, never 200
         assert r.status_code in (400, 404, 422)
 
+    @pytest.mark.asyncio
+    async def test_sibling_prefix_path_is_forbidden(self, tmp_path, monkeypatch):
+        """A sibling directory sharing the outputs prefix is still outside it."""
+        import backend.rain_backend as mod
+        from fastapi import HTTPException
+
+        output_dir = tmp_path / "outputs"
+        sibling_dir = tmp_path / "outputs-private"
+        output_dir.mkdir()
+        sibling_dir.mkdir()
+        (sibling_dir / "secret.png").write_bytes(b"private")
+        monkeypatch.setattr(mod, "OUTPUT_DIR", output_dir)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await mod.get_output("../outputs-private/secret.png")
+
+        assert exc_info.value.status_code == 403
+
     def test_valid_file_served(self, client, tmp_path, monkeypatch):
         """A file that exists in the outputs dir should be served."""
         from pathlib import Path
