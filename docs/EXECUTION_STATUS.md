@@ -79,6 +79,18 @@ Before changing deployment configuration, inspect the actual hosting account and
 
 Do not trigger a public deployment until the service identity, target environment, data persistence, authentication posture, and rollback path are understood. The current SQLite and local filesystem project store must not be exposed as a public multi-user datastore.
 
+### Render account inspection
+
+The connected Render workspace was inspected read-only. It returned four web services, all belonging to CIVINTELLIGENCE / CIVWATCH repositories; none is connected to the Rain God studio repository. The only listed PostgreSQL instance is `civintelligence-db`, and no Key Value instances were listed. Therefore, no existing Rain God Render service or Rain God production deployment was found in this connected workspace.
+
+This is not proof that no deployment exists on another hosting account or provider. It does establish that the inspected Render workspace has no Rain God service to update or move to a new commit. Do not repurpose a CIVINTELLIGENCE service or database for Rain God.
+
+### CI failure found during this audit
+
+The initial CI run for the execution-status PR failed only in the Python 3.10 test job before test collection. Coverage 7.17.0 attempted to import the standard-library `tomllib`, which is unavailable in Python 3.10. Docker, lint/type checks, and Python 3.11 tests passed in that run. The development requirements now pin Coverage 7.6.1; the follow-up CI run must verify this correction before merge.
+
+The path-containment and log-sanitization fix from stale PR #46 has also been reapplied against current `main` in a separate focused PR (#49), with a regression test for the sibling-prefix traversal case. That PR must pass CI before merge.
+
 ## 5. Required next engineering sequence
 
 ### A. Close the source-control audit
