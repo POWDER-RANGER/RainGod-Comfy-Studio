@@ -1,22 +1,22 @@
 # Rain God’s Sad Boy Pipeline — runtime dependencies
 
 # API framework
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
+fastapi==0.161.1
+uvicorn[standard]==0.54.0
 
 # HTTP clients / transport
-requests==2.32.4
-httpx==0.27.0
+requests==2.34.2
+httpx==0.28.1
 websockets==12.0
 
 # Validation and async utilities
-pydantic==2.7.1
-pydantic-settings==2.2.1
-anyio==4.3.0
+pydantic==2.14.1
+pydantic-settings==2.16.1
+anyio==4.15.1
 aiofiles==23.2.1
 
 # Image processing and logging
 Pillow==12.1.1
 rich==13.7.1
 python-json-logger==2.0.7
-python-dotenv==1.0.1
+python-dotenv==1.2.4

@@ -5,8 +5,8 @@ pytest==8.2.0
 pytest-asyncio==0.23.6
 pytest-cov==5.0.0
 # Coverage 7.17 imports tomllib, which is unavailable on Python 3.10.
-coverage==7.6.1
-ruff==0.4.4
+coverage==7.17.0
+ruff==0.17.2
 mypy==1.10.0
-bandit==1.7.8
-types-requests==2.32.4.20260324
+bandit==1.9.4
+types-requests==2.33.0.20261006
